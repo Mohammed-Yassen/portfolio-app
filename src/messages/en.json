@@ -1,0 +1,17 @@
+{
+  "Metadata": {
+    "title": "My Portfolio",
+    "description": "Welcome to my advanced portfolio"
+  },
+  "Hero": {
+    "cv_button": "Download CV",
+    "talk_button": "Let's Talk",
+    "cv_error": "CV not available",
+    "status": {
+      "AVAILABLE": "Available for work",
+      "BUSY": "Currently Busy",
+      "OPEN_FOR_COMMISSION": "Open for Projects",
+      "ON_LEAVE": "On Leave"
+    }
+  }
+}

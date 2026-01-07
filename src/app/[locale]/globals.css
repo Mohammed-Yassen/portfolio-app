@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Shared UI Colors */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* Radius System */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* Slightly rounder for a modern look */
+
+  /* Light Mode - Professional Clean (Soft Gray/Blue tints) */
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.2 0.02 240);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 240);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 240);
+
+  /* Primary: Deep Indigo/Blue */
+  --primary: oklch(0.55 0.18 250);
+  --primary-foreground: oklch(0.98 0.01 250);
+
+  --secondary: oklch(0.94 0.01 240);
+  --secondary-foreground: oklch(0.25 0.02 240);
+
+  --muted: oklch(0.94 0.01 240);
+  --muted-foreground: oklch(0.45 0.02 240);
+
+  --accent: oklch(0.94 0.01 240);
+  --accent-foreground: oklch(0.25 0.02 240);
+
+  --destructive: oklch(0.6 0.18 25);
+  --border: oklch(0.9 0.01 240);
+  --input: oklch(0.9 0.01 240);
+  --ring: oklch(0.55 0.18 250 / 40%);
+}
+
+.dark {
+  /* Dark Mode - Deep Lab (Dark Charcoal/Blue) */
+  --background: oklch(0.12 0.015 250);
+  /* Deep rich background */
+  --foreground: oklch(0.92 0.01 240);
+
+  --card: oklch(0.16 0.02 250);
+  /* Slightly lighter than background */
+  --card-foreground: oklch(0.92 0.01 240);
+
+  --popover: oklch(0.14 0.02 250);
+  --popover-foreground: oklch(0.92 0.01 240);
+
+  /* Primary: Vibrant Electric Blue for contrast */
+  --primary: oklch(0.7 0.18 250);
+  --primary-foreground: oklch(0.12 0.015 250);
+
+  --secondary: oklch(0.22 0.02 250);
+  --secondary-foreground: oklch(0.92 0.01 240);
+
+  --muted: oklch(0.22 0.02 250);
+  --muted-foreground: oklch(0.65 0.02 240);
+
+  --accent: oklch(0.25 0.03 250);
+  --accent-foreground: oklch(0.95 0.01 240);
+
+  --destructive: oklch(0.5 0.2 25);
+  --border: oklch(0.25 0.02 250);
+  --input: oklch(0.25 0.02 250);
+  --ring: oklch(0.7 0.18 250 / 30%);
+}
+@layer base {
+  :root {
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+  }
+
+  .dark {
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+  }
+  * {
+    @apply border-border outline-ring/50 transition-colors duration-200;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* This creates a very subtle grid pattern in dark mode for that "Researcher" feel */
+    background-image: radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+    background-size: 40px 40px;
+  }
+}
+section {
+  scroll-margin-top: 5rem;
+}
+/* Styling for Tiptap Code Blocks */
+/* tiptap.css */
+/* tiptap.css */
+
+/* The container for syntax-highlighted code */
+/* Better Code Block Visibility */
+.prose pre {
+  padding: 1.5rem !important;
+  line-height: 1.6;
+}
+
+.prose pre code {
+  color: #e6edf3 !important;
+  /* Force a high-contrast off-white */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Inline code highlight */
+.prose :not(pre)>code {
+  background: rgba(var(--primary), 0.1) !important;
+  color: hsl(var(--primary)) !important;
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 0.4rem;
+  font-size: 0.85em !important;
+}

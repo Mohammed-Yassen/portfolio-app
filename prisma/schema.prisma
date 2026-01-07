@@ -1,0 +1,536 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS ---
+// --- ENUMS ---
+
+enum Locale {
+  en
+  ar
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum Availability {
+  AVAILABLE
+  BUSY
+  OPEN_FOR_COMMISSION
+  ON_LEAVE
+}
+
+enum MessageStatus {
+  UNREAD
+  READ
+  REPLIED
+  ARCHIVED
+  SPAM
+}
+
+enum ProjectCategory {
+  WEB_DEVELOPMENT
+  MOBILE_APP
+  UI_UX_DESIGN
+  GRAPHIC_DESIGN
+  DATA_SCIENCE
+  AI
+  OPEN_SOURCE
+  OTHERS
+}
+
+// -----------------------------------------
+// 1. AUTH & IDENTITY
+// -----------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  role          UserRole  @default(USER)
+
+  accounts Account[]
+  sessions Session[]
+  profile  Profile?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------
+// 2. PROFILE & HERO (Localized)
+// -----------------------------------------
+
+model Profile {
+  id                String  @id @default("owner-static")
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone             String?
+  professionalEmail String  @default("contact@example.com")
+
+  resumeUrl String?
+
+  socials      SocialLinks[]
+  translations ProfileTranslation[]
+  updatedAt    DateTime             @updatedAt
+}
+
+model ProfileTranslation {
+  id       String  @id @default(cuid())
+  locale   Locale
+  location String  @default("Remote / Yemen")
+  bio      String? @db.Text
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, locale])
+}
+
+model HeroSection {
+  id           String            @id @default("hero-static")
+  primaryImage String
+  resumeUrl    String?
+  availability Availability      @default(AVAILABLE)
+  isActive     Boolean           @default(true)
+  translations HeroTranslation[]
+  updatedAt    DateTime          @updatedAt
+}
+
+model HeroTranslation {
+  id          String @id @default(cuid())
+  locale      Locale
+  greeting    String @default("Hi, I am")
+  name        String @default("Mohammed Yaseen")
+  role        String @default("Full-Stack Developer")
+  description String @db.Text
+  ctaText     String @default("Start a Project")
+
+  heroSectionId String
+  heroSection   HeroSection @relation(fields: [heroSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([heroSectionId, locale])
+}
+
+// -----------------------------------------
+// 3. ABOUT & SKILLS
+// -----------------------------------------
+
+model AboutSection {
+  id           String             @id @default("about-static")
+  translations AboutTranslation[]
+  corePillars  CorePillar[]
+  statuses     AboutStatus[]
+  updatedAt    DateTime           @updatedAt
+}
+
+model AboutTranslation {
+  id          String  @id @default(cuid())
+  locale      Locale
+  title       String
+  subtitle    String?
+  description String  @db.Text
+
+  aboutSectionId String
+  aboutSection   AboutSection @relation(fields: [aboutSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([aboutSectionId, locale])
+}
+
+model AboutStatus {
+  id             String              @id @default(cuid())
+  icon           String?
+  isActive       Boolean             @default(true)
+  translations   StatusTranslation[]
+  aboutSectionId String
+  aboutSection   AboutSection        @relation(fields: [aboutSectionId], references: [id], onDelete: Cascade)
+}
+
+model StatusTranslation {
+  id       String      @id @default(cuid())
+  locale   Locale
+  label    String
+  value    String
+  statusId String
+  status   AboutStatus @relation(fields: [statusId], references: [id], onDelete: Cascade)
+
+  @@unique([statusId, locale])
+}
+
+model CorePillar {
+  id             String              @id @default(cuid())
+  icon           String
+  translations   PillarTranslation[]
+  aboutSectionId String
+  aboutSection   AboutSection        @relation(fields: [aboutSectionId], references: [id], onDelete: Cascade)
+}
+
+model PillarTranslation {
+  id          String     @id @default(cuid())
+  locale      Locale
+  title       String
+  description String     @db.Text
+  pillarId    String
+  pillar      CorePillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+
+  @@unique([pillarId, locale])
+}
+
+// -----------------------------------------
+// 4. BLOG & PORTFOLIO (High Performance)
+// -----------------------------------------
+
+model Blog {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  image       String
+  isPublished Boolean @default(false)
+
+  // Relations
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  translations BlogTranslation[]
+  tags         Tag[]
+  likes        Like[]
+  comments     Comment[]
+
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug, isPublished])
+}
+
+model BlogTranslation {
+  id        String  @id @default(cuid())
+  locale    Locale
+  title     String
+  excerpt   String  @db.Text
+  content   String  @db.Text
+  metaTitle String?
+  metaDesc  String?
+
+  blogId String
+  blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, locale])
+}
+
+model Category {
+  id    String @id @default(cuid())
+  slug  String @unique
+  blogs Blog[]
+
+  translations CategoryTranslation[]
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  locale     Locale
+  name       String // e.g., "Technology" in EN, "تكنولوجيا" in AR
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+}
+
+model Like {
+  id     String @id @default(cuid())
+  blogId String
+  blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  ip     String
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  name      String
+  content   String   @db.Text
+  blogId    String
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id         String          @id @default(cuid())
+  slug       String          @unique
+  mainImage  String
+  gallery    String[]
+  category   ProjectCategory @default(WEB_DEVELOPMENT)
+  liveUrl    String?
+  repoUrl    String?
+  isFeatured Boolean         @default(false)
+  isActive   Boolean         @default(true)
+
+  translations ProjectTranslation[]
+  tags         Tag[]
+  techniques   Technique[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug, isActive])
+}
+
+model ProjectTranslation {
+  id          String  @id @default(cuid())
+  locale      Locale
+  title       String
+  description String  @db.Text
+  content     String? @db.Text
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, locale])
+}
+
+model Technique {
+  id   String  @id @default(cuid())
+  icon String?
+
+  experienceId String?
+  educationId  String?
+  experience   Experience?            @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  translations TechniqueTranslation[]
+  updatedAt    DateTime               @updatedAt
+
+  projects  Project[]
+  education Education? @relation(fields: [educationId], references: [id])
+}
+
+model TechniqueTranslation {
+  id          String    @id @default(cuid())
+  locale      Locale
+  name        String // Specific tech used: "GraphQL", "Tailwind"
+  techniqueId String
+  technique   Technique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([techniqueId, locale])
+}
+
+// 
+model Tag {
+  id           String           @id @default(cuid())
+  translations TagTranslation[]
+  projects     Project[]
+  blogs        Blog[]
+}
+
+model TagTranslation {
+  id     String @id @default(cuid())
+  locale Locale
+  name   String
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, locale])
+}
+
+// -----------------------------------------
+// 5. SKILLS & EXPERIENCE (Multi-Language)
+// -----------------------------------------
+
+model SkillCategory {
+  id           String                     @id @default(cuid())
+  icon         String // Lucide icon name
+  order        Int                        @default(0)
+  isActive     Boolean                    @default(true)
+  translations SkillCategoryTranslation[]
+  skills       Skill[]
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+}
+
+model SkillCategoryTranslation {
+  id         String        @id @default(cuid())
+  locale     Locale
+  title      String // e.g., "Frontend" or "واجهة أمامية"
+  categoryId String
+  category   SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+}
+
+model Skill {
+  id           String             @id @default(cuid())
+  level        Int? // Progress bar percentage (0-100)
+  icon         String? // Optional skill-specific icon
+  categoryId   String
+  category     SkillCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations SkillTranslation[]
+}
+
+model SkillTranslation {
+  id      String @id @default(cuid())
+  locale  Locale
+  name    String // e.g., "React" or "رياكت"
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([skillId, locale])
+}
+
+model Experience {
+  id             String    @id @default(cuid())
+  companyName    String
+  companyLogo    String? // URL for the company logo
+  companyWebsite String? // Link to company site
+  location       String?
+  startDate      DateTime
+  endDate        DateTime? // Null if isCurrent is true
+  isCurrent      Boolean   @default(false)
+
+  // Employment Type: Full-time, Freelance, Remote, etc.
+  // We put this in translations because words like "Remote" change per language.
+
+  translations ExperienceTranslation[]
+  techniques   Technique[]
+  updatedAt    DateTime                @updatedAt
+}
+
+model ExperienceTranslation {
+  id             String     @id @default(cuid())
+  locale         Locale
+  role           String // e.g., "Senior Developer"
+  employmentType String? // e.g., "Full-time" or "دوام كامل"
+  description    String?    @db.Text // Rich text or bullet points
+  experienceId   String
+  experience     Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@unique([experienceId, locale])
+}
+
+// 
+model Education {
+  id            String    @id @default(cuid())
+  schoolName    String
+  schoolLogo    String?
+  schoolWebsite String?
+  location      String?
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean   @default(false)
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  translations EducationTranslation[]
+  techniques   Technique[] // Skills or technologies learned during study
+}
+
+model EducationTranslation {
+  id          String @id @default(cuid())
+  educationId String
+  locale      Locale
+
+  degree       String // e.g., Bachelor of Science
+  fieldOfStudy String? // e.g., Computer Science
+  description  String? @db.Text
+
+  education Education @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  @@unique([educationId, locale])
+}
+
+// -----------------------------------------
+// 6. MESSAGES & FEEDBACK
+// -----------------------------------------
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String        @db.Text
+  status    MessageStatus @default(UNREAD)
+  priority  Boolean       @default(false)
+  ipAddress String? // Anti-spam auditing
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email, status])
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  clientName  String
+  clientTitle String
+  role        String?
+  content     String   @db.Text
+  rating      Int?     @default(5)
+  avatarUrl   String?
+  isFeatured  Boolean  @default(false)
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([isActive, isFeatured])
+}
+
+// -----------------------------------------
+// 7. SYSTEM CONFIG & UI
+// -----------------------------------------
+
+model SectionActive {
+  id String @id @default("ui-config")
+
+  navActive        Boolean @default(true)
+  footerActive     Boolean @default(true)
+  heroActive       Boolean @default(true)
+  aboutActive      Boolean @default(true)
+  skillActive      Boolean @default(true)
+  serviceActive    Boolean @default(true)
+  projectActive    Boolean @default(true)
+  experienceActive Boolean @default(true)
+  blogActive       Boolean @default(true)
+  testiActive      Boolean @default(true)
+  contactActive    Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
+model SocialLinks {
+  id        String  @id @default(cuid())
+  name      String
+  url       String
+  icon      String?
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
