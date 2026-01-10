@@ -139,3 +139,88 @@ export const educationSchema = z.object({
 });
 
 export type EducationFormValue = z.infer<typeof educationSchema>;
+
+//
+
+/**
+ * --- Section Activation Schema ---
+ * Controls the visibility of every major component on the portfolio.
+ * Matches the Prisma 'SectionActive' model.
+ */
+export const sectionActiveSchema = z.object({
+	navActive: z.boolean().default(true),
+	footerActive: z.boolean().default(true),
+	heroActive: z.boolean().default(true),
+	aboutActive: z.boolean().default(true),
+	skillActive: z.boolean().default(true),
+	serviceActive: z.boolean().default(true),
+	projectActive: z.boolean().default(true),
+	experienceActive: z.boolean().default(true),
+	educationActive: z.boolean().default(true),
+	certificationActive: z.boolean().default(true),
+	blogActive: z.boolean().default(true),
+	testiActive: z.boolean().default(true),
+	contactActive: z.boolean().default(true),
+});
+
+/**
+ * --- Site Configuration Schema ---
+ * Controls global metadata and site-wide strings.
+ */
+export const siteConfigSchema = z.object({
+	siteName: z
+		.string()
+		.min(2, "Site name must be at least 2 characters")
+		.default("DevPortfolio"),
+	footerText: z.string().min(1, "Footer text cannot be empty"),
+	profileViews: z.number().int().default(0),
+	enableBlog: z.boolean().default(true),
+	metaDescription: z
+		.string()
+		.max(160, "Description should be under 160 characters")
+		.optional()
+		.nullable(),
+});
+
+// --- Inferred TypeScript Types ---
+
+/**
+ * Represents the boolean state of all portfolio sections.
+ * Use this in your SectionActivationClient component props.
+ */
+export type SectionActiveValues = z.infer<typeof sectionActiveSchema>;
+
+/**
+ * Represents the global site settings.
+ * Use this for the SiteConfig form components.
+ */
+export type SiteConfigValues = z.infer<typeof siteConfigSchema>;
+
+export const certificationSchema = z.object({
+	id: z.string().optional().nullable(),
+	issuer: z.string().min(1, "Issuer is required"),
+	coverUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+	link: z.string().url("Invalid URL").optional().or(z.literal("")),
+	issueDate: z.string().min(1, "Issue date is required"),
+	expireDate: z.string().optional().nullable(),
+	credentialUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+	isActive: z.boolean(),
+
+	// Translation data
+	locale: z.nativeEnum(Locale),
+	title: z.string().min(1, "Title is required"),
+	credentialId: z.string().optional().nullable(),
+	description: z.string().optional().nullable(),
+});
+
+export type CertificationFormValue = z.infer<typeof certificationSchema>;
+
+export const socialLinkSchema = z.object({
+	id: z.string().optional().nullable(),
+	name: z.string().min(1, "Platform name is required"),
+	url: z.string().url("Invalid URL for social link"),
+	icon: z.string().optional().nullable(),
+	profileId: z.string().optional().nullable(), // Optional if handled by the action
+});
+
+export type SocialLinkFormValues = z.infer<typeof socialLinkSchema>;

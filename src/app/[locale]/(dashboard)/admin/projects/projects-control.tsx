@@ -84,7 +84,7 @@ export const ProjectFormContainer = ({
 	return (
 		<div className='grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto p-6'>
 			{/* LEFT SIDE: FORM */}
-			<div className='lg:col-span-7'>
+			<div className='lg:col-span-12'>
 				<Card className='rounded-3xl shadow-sm border-muted-foreground/10'>
 					<CardHeader className='flex flex-row items-center justify-between'>
 						<CardTitle className='flex items-center gap-2 text-xl'>
@@ -125,7 +125,7 @@ export const ProjectFormContainer = ({
 			</div>
 
 			{/* RIGHT SIDE: LIST */}
-			<div className='lg:col-span-5 space-y-4'>
+			<div className='lg:col-span-12 space-y-4'>
 				<div className='flex items-center justify-between px-2'>
 					<h2 className='font-bold text-lg flex items-center gap-2'>
 						<FolderOpen className='w-5 h-5 text-primary' />

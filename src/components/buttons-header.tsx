@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, LogIn } from "lucide-react";
-import { LanguageToggle } from "./shared/langouge-toggel";
+import { LanguageToggle } from "./shared/language-toggle";
 
 export function HomeHeader({ user }: { user: unknown }) {
 	return (
@@ -23,7 +23,7 @@ export function HomeHeader({ user }: { user: unknown }) {
 					<Button
 						asChild
 						className='rounded-full px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 transition-all active:scale-95'>
-						<Link href='/dashboard' className='flex items-center gap-2'>
+						<Link href='/admin' className='flex items-center gap-2'>
 							<LayoutDashboard size={16} />
 							Dashboard
 						</Link>

@@ -30,6 +30,10 @@ import { ExperienceSection } from "@/components/sections/experience-section";
 
 import { getProjects } from "@/server/data/projects";
 import { ProjectsSection } from "@/components/sections/projects-section";
+import { getBlogs } from "@/server/data/blogs";
+import BlogSection from "@/components/sections/blog-section";
+import { getPublicTestimonials } from "@/server/data/testimonial";
+import { TestimonialsSection } from "@/components/sections/testimonials-section";
 
 export async function HeroLoader({ locale }: { locale: Locale }) {
 	const data = (await getHeroData(locale)) as HeroData;
@@ -72,4 +76,14 @@ export async function ProjectLoader({ locale }: { locale: Locale }) {
 	const data = await getProjects(locale);
 	if (!data) return null;
 	return <ProjectsSection projectsData={data} locale={locale} />;
+}
+export async function BlogLoader({ locale }: { locale: Locale }) {
+	const data = await getBlogs(locale);
+	if (!data) return null;
+	return <BlogSection blogs={data} locale={locale} />;
+}
+export async function TestimonialsLoader({ locale }: { locale: Locale }) {
+	const data = await getPublicTestimonials();
+	if (!data) return null;
+	return <TestimonialsSection data={data} locale={locale} />;
 }

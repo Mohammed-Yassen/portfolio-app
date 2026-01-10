@@ -13,5 +13,203 @@
       "OPEN_FOR_COMMISSION": "Open for Projects",
       "ON_LEAVE": "On Leave"
     }
-  }
+  },
+  "BlogSection": {
+    "titleStart": "Latest",
+    "titleEnd": "Insights",
+    "viewAll": "View all articles"
+  },
+  "BlogCard": {
+    "draft": "Draft",
+    "readTime": "min read",
+    "continueReading": "Continue Reading"
+  },
+  "BlogDetail": {
+    "backToHome": "Back to home",
+    "draft": "Draft",
+    "readTime": "min read"
+  },
+  "ContactSection": {
+    "badge": "Available for new projects",
+    "titleStart": "Get In",
+    "titleEnd": "Touch",
+    "description": "Have a complex research problem or a SaaS idea? Let’s build something {innovative} together.",
+    "quote": "Design is not just what it looks like. Design is how it works.",
+    "labelName": "Name",
+    "labelEmail": "Email",
+    "labelSubject": "Subject",
+    "labelMessage": "Message",
+    "placeholderName": "John Doe",
+    "placeholderEmail": "john@example.com",
+    "placeholderSubject": "Project Inquiry",
+    "placeholderMessage": "Tell me about your idea...",
+    "btnSend": "Send Message",
+    "btnSending": "Sending...",
+    "success": "Message sent successfully! I'll be in touch.",
+    "error": "Something went wrong. Please try again."
+  },
+  "sidebar": {
+    "mode": "Mode",
+    "logout": "Logout",
+    "admin": "Admin",
+    "version": "v2.0",
+    "switchLang": "العربية",
+    "menu": {
+      "overview": "Overview",
+      "settings": "Settings",
+      "projects": "Projects",
+      "blogs": "Blogs",
+      "testimonials": "Testimonials",
+      "messages": "Messages",
+      "users": "Users"
+    }
+  },
+  "TestimonialForm": {
+    "title": "Share Your Story",
+    "desc": "Help others understand the value of my work by sharing your experience.",
+    "labelName": "Display Name",
+    "labelTitle": "Job Title",
+    "labelFeedback": "Your Feedback",
+    "placeholderFeedback": "Tell me about your experience working with me...",
+    "submit": "Submit Review",
+    "loading": "Sending...",
+    "success": "Your review has been submitted for moderation!",
+    "error": "Something went wrong. Please try again."
+  },
+  "Testimonials": {
+    "title": "What <span>Clients</span> Say",
+    "description": "Real feedback from people I've worked with face-to-face.",
+    "cta": {
+      "question": "Worked with me before?",
+      "subtext": "Your feedback helps me improve and helps others trust my work.",
+      "buttonText": "Leave a Review Now"
+    }
+  },
+  "NewTestimonialPage": {
+    "cancel": "Cancel",
+    "step": "Step {current} of {total}",
+    "title": "Share Your Story",
+    "description": "Help others understand the value of my work by sharing your honest experience.",
+    "postingAs": "Posting as {name}",
+    "verified": "Verified Account",
+    "disclaimer": "By submitting, you agree that your feedback and profile details may be displayed publicly in this gallery."
+  },
+  "AdminTestimonials": {
+    "adminPanel": "Admin Panel",
+    "moderationMode": "Moderation Mode",
+    "moderationQueue": "Moderation Queue",
+    "moderationDescription": "Manage client feedback and control visibility on your profile.",
+    "total": "Total Testimonials",
+    "pendingApproval": "Pending",
+    "featured": "Featured",
+    "colClient": "Client",
+    "colStatus": "Status",
+    "colRating": "Rating",
+    "colActions": "Actions",
+    "statusLive": "Live",
+    "statusPending": "Pending",
+    "quickActions": "Quick Actions",
+    "approve": "Approve",
+    "unapprove": "Unapprove",
+    "feature": "Feature",
+    "unfeature": "Unfeature",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure? This action cannot be undone.",
+    "actionSuccess": "Action completed successfully",
+    "actionError": "Failed to complete action",
+    "noData": "No testimonials found in the queue.",
+    "viewDetails": "View Details",
+    "testimonialDetail": "Testimonial Content",
+    "submittedOn": "Submitted on",
+    "close": "Close",
+    "role": "Role "
+  },
+  "certificationForm":{
+    "title": "Certifications",
+		"subtitle": "Professional licenses & credentials",
+		"addTitle": "Add New Certification",
+		"editTitle": "Edit Certification",
+		"certName": "Certification Name",
+		"certPlaceholder": "e.g. AWS Certified Developer",
+		"issuer": "Issuing Organization",
+		"issuerPlaceholder": "e.g. Amazon Web Services",
+		"issueDate": "Issue Date",
+		"expireDate": "Expiration Date (Optional)",
+		"credentialId": "Credential ID",
+		"credentialIdPlaceholder": "ABC123DEF",
+		"credentialUrl": "Credential URL",
+		"urlPlaceholder": "https://...",
+		"assetTitle": "Certification Asset",
+		"save": "Save",
+		"update": "Update",
+		"cancel": "Cancel",
+		"noData": "No certifications listed yet.",
+		"issuedOn": "Issued:",
+		"uploadBtn": "Select Image",
+		"uploading": "Uploading...",
+    "successUpdate":"Certification updated successfully!",
+    "successCreate":"Certification added successfully!"
+  },
+    "BlogManager": {
+    "title": "Blog Management",
+    "subtitle": "Create and manage your articles",
+    "newPost": "New Post",
+    "editPost": "Edit Post",
+    "discardEdit": "Discard Edit & Create New",
+    "feed": "Feed",
+    "noContent": "No content found for {locale}",
+    "uncategorized": "Uncategorized",
+    "confirmDelete": "Permanently delete this article?",
+    "slug": "Slug",
+    "status": {
+      "live": "LIVE",
+      "draft": "DRAFT"
+    },
+    "toast": {
+      "published": "Post published",
+      "updated": "Post updated",
+      "deleted": "Deleted successfully",
+      "failed": "Operation failed"
+    }
+  },
+  
+  "BlogForm": {
+    "tabs": {
+      "text": "Text",
+      "taxonomy": "Taxonomy",
+      "media": "Media",
+      "seo": "SEO"
+    },
+    "labels": {
+      "title": "Article Title",
+      "slug": "URL Slug",
+      "excerpt": "Excerpt",
+      "content": "Markdown Content",
+      "category": "Category",
+      "tags": "Tags",
+      "metaTitle": "Meta Title (SEO)",
+      "metaDesc": "Meta Description",
+      "status": "Status",
+      "featuredImage": "Featured Image"
+    },
+    "placeholders": {
+      "title": "The future of AI...",
+      "excerpt": "Short summary...",
+      "content": "# Start writing...",
+      "newTag": "New Tag...",
+      "metaTitle": "Custom SEO Title...",
+      "metaDesc": "Custom SEO Description..."
+    },
+    "buttons": {
+      "newTag": "New Tag",
+      "save": "Save Changes",
+      "publish": "Publish Article",
+      "removeImage": "Remove Image"
+    },
+    "info": {
+      "oneCategory": "One category only",
+      "seo": "SEO metadata helps search engines. If empty, title and excerpt are used.",
+      "imageSize": "Recommended size: 1200x630px"
+    }
+}
 }

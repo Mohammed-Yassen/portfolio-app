@@ -3,6 +3,7 @@
 
 import { useEffect, useTransition } from "react";
 import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
+import { _Translator, useTranslations } from "next-intl"; // Added
 import {
 	Plus,
 	Loader2,
@@ -44,6 +45,9 @@ import {
 	BlogSchema,
 } from "@/server/validations/blog-validation";
 import { TransformedBlog } from "@/types/blog-types";
+import { cn } from "@/lib/utils";
+import { RecordType } from "zod/v3";
+import { RichTextEditor } from "@/components/tiptap/rich-text-editor";
 
 interface BlogFormProps {
 	locale: Locale;
@@ -53,6 +57,7 @@ interface BlogFormProps {
 	onSubmit: (values: BlogFormValues) => Promise<void>;
 	isPending?: boolean;
 }
+
 export function BlogForm({
 	locale,
 	availableCategories,
@@ -61,9 +66,11 @@ export function BlogForm({
 	onSubmit,
 	isPending: externalPending,
 }: BlogFormProps) {
+	const t = useTranslations("BlogForm"); // Make sure to add this namespace to your JSON
 	const [internalPending, startTransition] = useTransition();
 	const isPending = externalPending || internalPending;
 	const mounted = useIsMounted();
+	const isRtl = locale === "ar";
 
 	const form = useForm<BlogFormValues>({
 		resolver: zodResolver(BlogSchema) as never,
@@ -76,7 +83,7 @@ export function BlogForm({
 			image: "",
 			isPublished: false,
 			locale,
-			categoryIds: [], // Still an array to match Zod, but logic will restrict to 1
+			categoryIds: [],
 			tagIds: [],
 			newTags: [],
 			metaTitle: "",
@@ -84,7 +91,6 @@ export function BlogForm({
 		},
 	});
 
-	// We only need field array for Tags now
 	const {
 		fields: tagFields,
 		append: appendTag,
@@ -97,10 +103,9 @@ export function BlogForm({
 	useEffect(() => {
 		if (selectedBlog) {
 			form.reset({
-				id: "",
+				id: selectedBlog.id,
 				slug: selectedBlog.slug,
 				image: selectedBlog.image,
-				// If it's a single string from DB, wrap it in array for Zod
 				categoryIds: selectedBlog.categoryId ? [selectedBlog.categoryId] : [],
 				isPublished: selectedBlog.isPublished,
 				locale: selectedBlog.locale,
@@ -113,26 +118,38 @@ export function BlogForm({
 				newTags: [],
 			});
 		}
-	}, [selectedBlog, form, locale]);
+	}, [selectedBlog, form]);
+	const submit = (values: BlogFormValues) => {
+		startTransition(async () => {
+			await onSubmit(values);
+			form.reset();
+		});
+	};
 
 	if (!mounted)
 		return <div className='h-125 animate-pulse bg-muted rounded-3xl' />;
+
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+			<form
+				onSubmit={form.handleSubmit(submit)}
+				className={cn("space-y-6", isRtl && "text-right")}>
 				<Tabs defaultValue='content' className='w-full'>
 					<TabsList className='grid w-full grid-cols-4 mb-6 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl'>
 						<TabsTrigger value='content' className='rounded-lg'>
-							<Type className='w-4 h-4 mr-2' /> Text
+							<Type className={cn("w-4 h-4")} /> {t("tabs.text")}
 						</TabsTrigger>
 						<TabsTrigger value='taxonomy' className='rounded-lg'>
-							<LayoutGrid className='w-4 h-4 mr-2' /> Taxonomy
+							<LayoutGrid className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />{" "}
+							{t("tabs.taxonomy")}
 						</TabsTrigger>
 						<TabsTrigger value='media' className='rounded-lg'>
-							<ImagePlus className='w-4 h-4 mr-2' /> Media
+							<ImagePlus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />{" "}
+							{t("tabs.media")}
 						</TabsTrigger>
 						<TabsTrigger value='seo' className='rounded-lg'>
-							<Search className='w-4 h-4 mr-2' /> SEO
+							<Search className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />{" "}
+							{t("tabs.seo")}
 						</TabsTrigger>
 					</TabsList>
 
@@ -144,104 +161,115 @@ export function BlogForm({
 							<FormFieldWrapper
 								control={form.control}
 								name='title'
-								label='Article Title'>
+								label={t("labels.title")}>
 								{(field) => (
-									<Input placeholder='The future of AI...' {...field} />
+									<Input placeholder={t("placeholders.title")} {...field} />
 								)}
 							</FormFieldWrapper>
 							<FormFieldWrapper
 								control={form.control}
 								name='slug'
-								label='URL Slug'>
-								{(field) => <Input placeholder='future-of-ai' {...field} />}
+								label={t("labels.slug")}>
+								{(field) => (
+									<Input
+										placeholder='url-slug-here'
+										{...field}
+										className='text-left'
+										dir='ltr'
+									/>
+								)}
 							</FormFieldWrapper>
 						</div>
 						<FormFieldWrapper
 							control={form.control}
 							name='excerpt'
-							label='Excerpt'>
+							label={t("labels.excerpt")}>
 							{(field) => (
-								<Textarea rows={2} placeholder='Short summary...' {...field} />
+								<Textarea
+									rows={2}
+									placeholder={t("placeholders.excerpt")}
+									{...field}
+								/>
 							)}
 						</FormFieldWrapper>
 						<FormFieldWrapper
 							control={form.control}
 							name='content'
-							label='Markdown Content'>
+							label='Article Body'>
+							{(field) => (
+								<RichTextEditor value={field.value} onChange={field.onChange} />
+							)}
+						</FormFieldWrapper>
+						{/* <FormFieldWrapper
+							control={form.control}
+							name='content'
+							label={t("labels.content")}>
 							{(field) => (
 								<Textarea
 									rows={12}
 									className='font-mono'
-									placeholder='# Start writing...'
+									placeholder={t("placeholders.content")}
 									{...field}
 								/>
 							)}
-						</FormFieldWrapper>
+						</FormFieldWrapper> */}
 					</TabsContent>
 
-					{/* TAXONOMY TAB (Categories & Tags as Badges) */}
+					{/* TAXONOMY TAB */}
 					<TabsContent
 						value='taxonomy'
 						className='space-y-8 animate-in fade-in'>
-						{/* UPDATED CATEGORIES SECTION (Single Selection Only) */}
 						<div className='space-y-3'>
 							<div className='flex items-center justify-between'>
 								<FormLabel className='text-base font-bold'>
-									Category <span className='text-destructive'>*</span>
+									{t("labels.category")} *
 								</FormLabel>
 								<Badge variant='outline' className='text-[10px] uppercase'>
-									One category only
+									{t("info.oneCategory")}
 								</Badge>
 							</div>
-
 							<div className='flex flex-wrap gap-2 p-4 border-2 border-dashed rounded-3xl bg-muted/5 min-h-[80px]'>
 								{availableCategories.map((cat) => {
-									// Logic: Check if this ID is the current (and only) selection
 									const isSelected = form.watch("categoryIds")?.[0] === cat.id;
-
 									return (
 										<Badge
 											key={cat.id}
 											variant={isSelected ? "default" : "outline"}
 											className='cursor-pointer px-4 py-2 rounded-xl transition-all'
-											onClick={() => {
-												// Logic: Replace the array with just this one ID
+											onClick={() =>
 												form.setValue(
 													"categoryIds",
 													isSelected ? [] : [cat.id],
 													{ shouldDirty: true, shouldValidate: true },
-												);
-											}}>
+												)
+											}>
 											{cat.name}
-											{isSelected && <X className='w-3 h-3 ml-2 opacity-50' />}
+											{isSelected && (
+												<X className={cn("w-3 h-3", isRtl ? "mr-2" : "ml-2")} />
+											)}
 										</Badge>
 									);
 								})}
 							</div>
-							{/* Error message for category */}
-							{form.formState.errors.categoryIds && (
-								<p className='text-xs text-destructive'>
-									{form.formState.errors.categoryIds.message}
-								</p>
-							)}
 						</div>
 
 						<Separator className='opacity-50' />
 
-						{/* TAGS SECTION (Multiple Selection Allowed) */}
 						<div className='space-y-3'>
 							<div className='flex items-center justify-between'>
-								<FormLabel className='text-base font-bold'>Tags</FormLabel>
+								<FormLabel className='text-base font-bold'>
+									{t("labels.tags")}
+								</FormLabel>
 								<Button
 									type='button'
 									variant='outline'
 									size='sm'
 									className='h-7 rounded-full text-[10px] uppercase font-bold'
 									onClick={() => appendTag({ name: "" })}>
-									<Plus className='w-3 h-3 mr-1' /> New Tag
+									<Plus className={cn("w-3 h-3")} /> {t("buttons.newTag")}
 								</Button>
 							</div>
-							<div className='flex flex-wrap gap-2 p-4 border rounded-2xl min-h-[100px] bg-zinc-50/50 dark:bg-zinc-900/50'>
+							<div className='flex flex-wrap gap-2 p-4 border rounded-2xl min-h-25 bg-zinc-50/50 dark:bg-zinc-900/50'>
 								{availableTags.map((tag) => {
 									const isSelected = form.watch("tagIds").includes(tag.id);
 									return (
@@ -263,7 +291,6 @@ export function BlogForm({
 										</Badge>
 									);
 								})}
-								{/* New Tag Fields Logic */}
 								{tagFields.map((field, index) => (
 									<div
 										key={field.id}
@@ -271,7 +298,7 @@ export function BlogForm({
 										<input
 											{...form.register(`newTags.${index}.name`)}
 											className='bg-transparent text-xs font-bold outline-none w-20'
-											placeholder='New Tag...'
+											placeholder={t("placeholders.newTag")}
 											autoFocus
 										/>
 										<Button
@@ -287,9 +314,10 @@ export function BlogForm({
 							</div>
 						</div>
 					</TabsContent>
+
 					{/* MEDIA TAB */}
 					<TabsContent value='media' className='animate-in fade-in'>
-						<BlogImageUploader form={form} />
+						<BlogImageUploader form={form} t={t} isRtl={isRtl} />
 					</TabsContent>
 
 					{/* SEO TAB */}
@@ -297,17 +325,16 @@ export function BlogForm({
 						<div className='p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex gap-3'>
 							<Globe className='w-5 h-5 text-blue-500 shrink-0' />
 							<p className='text-xs text-blue-700 dark:text-blue-300'>
-								SEO metadata helps search engines. If empty, title and excerpt
-								are used.
+								{t("info.seo")}
 							</p>
 						</div>
 						<FormFieldWrapper
 							control={form.control}
 							name='metaTitle'
-							label='Meta Title (SEO)'>
+							label={t("labels.metaTitle")}>
 							{(field) => (
 								<Input
-									placeholder='Custom SEO Title...'
+									placeholder={t("placeholders.metaTitle")}
 									{...field}
 									value={field.value ?? ""}
 								/>
@@ -316,10 +343,10 @@ export function BlogForm({
 						<FormFieldWrapper
 							control={form.control}
 							name='metaDesc'
-							label='Meta Description'>
+							label={t("labels.metaDesc")}>
 							{(field) => (
 								<Textarea
-									placeholder='Custom SEO Description...'
+									placeholder={t("placeholders.metaDesc")}
 									{...field}
 									value={field.value ?? ""}
 								/>
@@ -336,13 +363,13 @@ export function BlogForm({
 						{isPending ? (
 							<Loader2 className='animate-spin' />
 						) : (
-							<Save className='mr-2 w-5 h-5' />
+							<Save className={cn("w-5 h-5", isRtl ? "ml-2" : "mr-2")} />
 						)}
-						{selectedBlog ? "Save Changes" : "Publish Article"}
+						{selectedBlog ? t("buttons.save") : t("buttons.publish")}
 					</Button>
 					<div className='flex flex-col items-center justify-center px-4 border rounded-xl bg-muted/30'>
 						<span className='text-[10px] font-bold uppercase text-muted-foreground'>
-							Status
+							{t("labels.status")}
 						</span>
 						<FormField
 							control={form.control}
@@ -360,13 +387,22 @@ export function BlogForm({
 		</Form>
 	);
 }
-
-// --- SUB-COMPONENTS ---
-function BlogImageUploader({ form }: { form: UseFormReturn<BlogFormValues> }) {
+type BlogFormTranslations = ReturnType<typeof useTranslations<"BlogForm">>;
+function BlogImageUploader({
+	form,
+	t,
+	isRtl,
+}: {
+	form: UseFormReturn<BlogFormValues>;
+	t: BlogFormTranslations;
+	isRtl: boolean;
+}) {
 	const image = form.watch("image");
 	return (
 		<div className='space-y-4'>
-			<FormLabel className='text-base font-bold'>Featured Image</FormLabel>
+			<FormLabel className='text-base font-bold'>
+				{t("labels.featuredImage")}
+			</FormLabel>
 			<div className='group relative p-8 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-4 bg-zinc-50 dark:bg-zinc-900 transition-colors hover:border-primary/50'>
 				{image ? (
 					<div className='relative aspect-video w-full rounded-2xl overflow-hidden shadow-xl'>
@@ -376,7 +412,8 @@ function BlogImageUploader({ form }: { form: UseFormReturn<BlogFormValues> }) {
 								type='button'
 								variant='destructive'
 								onClick={() => form.setValue("image", "")}>
-								<Trash2 className='w-4 h-4 mr-2' /> Remove Image
+								<Trash2 className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />{" "}
+								{t("buttons.removeImage")}
 							</Button>
 						</div>
 					</div>
@@ -389,7 +426,7 @@ function BlogImageUploader({ form }: { form: UseFormReturn<BlogFormValues> }) {
 							}
 						/>
 						<p className='text-xs text-muted-foreground'>
-							Recommended size: 1200x630px
+							{t("info.imageSize")}
 						</p>
 					</>
 				)}

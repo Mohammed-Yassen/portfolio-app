@@ -125,6 +125,15 @@ model ProfileTranslation {
   @@unique([profileId, locale])
 }
 
+model SocialLinks {
+  id        String  @id @default(cuid())
+  name      String
+  url       String
+  icon      String?
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
 model HeroSection {
   id           String            @id @default("hero-static")
   primaryImage String
@@ -382,7 +391,7 @@ model SkillCategory {
 model SkillCategoryTranslation {
   id         String        @id @default(cuid())
   locale     Locale
-  title      String // e.g., "Frontend" or "واجهة أمامية"
+  title      String
   categoryId String
   category   SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -489,19 +498,33 @@ model ContactMessage {
   @@index([email, status])
 }
 
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+  STAR
+}
+
 model Testimonial {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   clientName  String
   clientTitle String
-  role        String?
-  content     String   @db.Text
-  rating      Int?     @default(5)
-  avatarUrl   String?
-  isFeatured  Boolean  @default(false)
-  isActive    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  email       String?
 
-  @@index([isActive, isFeatured])
+  status      TestimonialStatus @default(PENDING)
+  role        String?
+  content     String            @db.Text
+  rating      Int?              @default(5)
+  avatarUrl   String?
+  isFeatured  Boolean           @default(false)
+  linkedinUrl String?
+  githubUrl   String?
+
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isActive, isFeatured, status])
 }
 
 // -----------------------------------------
@@ -523,14 +546,37 @@ model SectionActive {
   testiActive      Boolean @default(true)
   contactActive    Boolean @default(true)
 
+  // Add these two fields:
+  educationActive     Boolean @default(true)
+  certificationActive Boolean @default(true)
+
   updatedAt DateTime @updatedAt
 }
 
-model SocialLinks {
-  id        String  @id @default(cuid())
-  name      String
-  url       String
-  icon      String?
-  profileId String
-  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+model Certification {
+  id            String    @id @default(cuid())
+  issuer        String
+  coverUrl      String?
+  link          String? // External link to verify
+  issueDate     DateTime
+  expireDate    DateTime?
+  credentialUrl String?
+  isActive      Boolean   @default(true)
+
+  translations CertificationTranslation[]
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+}
+
+model CertificationTranslation {
+  id           String  @id @default(cuid())
+  locale       Locale
+  title        String // e.g., "AWS Certified Solutions Architect"
+  credentialId String?
+
+  description     String?       @db.Text
+  certificationId String
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@unique([certificationId, locale])
 }

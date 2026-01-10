@@ -13,5 +13,204 @@
       "OPEN_FOR_COMMISSION": "متاح للمشاريع",
       "ON_LEAVE": "في إجازة"
     }
+  },
+  "BlogSection": {
+    "titleStart": "أحدث",
+    "titleEnd": "المقالات",
+    "viewAll": "عرض كل المقالات"
+  },
+  "BlogCard": {
+    "draft": "مسودة",
+    "readTime": "دقائق للقراءة",
+    "continueReading": "متابعة القراءة"
+  },
+  "BlogDetail": {
+    "backToHome": "العودة للرئيسية",
+    "draft": "مسودة",
+    "readTime": "دقائق للقراءة"
+  },
+  "ContactSection": {
+    "badge": "متاح للمشاريع الجديدة",
+    "titleStart": "ابق على",
+    "titleEnd": "تواصل",
+    "description": "لديك مشكلة بحثية معقدة أو فكرة تقنية؟ لنبني شيئاً {innovative} معاً.",
+    "quote": "التصميم ليس مجرد شكل، التصميم هو كيف تعمل الأشياء.",
+    "labelName": "الاسم",
+    "labelEmail": "البريد الإلكتروني",
+    "labelSubject": "الموضوع",
+    "labelMessage": "الرسالة",
+    "placeholderName": "جون دو",
+    "placeholderEmail": "john@example.com",
+    "placeholderSubject": "استفسار عن مشروع",
+    "placeholderMessage": "أخبرني عن فكرتك...",
+    "btnSend": "إرسال الرسالة",
+    "btnSending": "جاري الإرسال...",
+    "success": "تم إرسال الرسالة بنجاح! سأتواصل معك قريباً.",
+    "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+  },
+  "sidebar": {
+    "mode": "الوضع",
+    "logout": "خروج",
+    "admin": "المدير",
+    "version": "٢.٠",
+    "switchLang": "English",
+    "menu": {
+      "overview": "الرئيسية",
+      "settings": "الإعدادات",
+      "projects": "المشاريع",
+      "blogs": "المدونات",
+      "testimonials": "التوصيات",
+      "messages": "الرسائل",
+      "users": "المستخدمين"
+    }
+  },
+  "TestimonialForm": {
+    "title": "شارك قصتك",
+    "desc": "ساعد الآخرين في فهم قيمة عملي من خلال مشاركة تجربتك.",
+    "labelName": "الاسم الظاهر",
+    "labelTitle": "مسمى الوظيفة",
+    "labelFeedback": "رأيك",
+    "placeholderFeedback": "أخبرني عن تجربتك في العمل معي...",
+    "submit": "إرسال التقييم",
+    "loading": "جاري الإرسال...",
+    "success": "تم إرسال تقييمك للمراجعة!",
+    "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+  },
+  "Testimonials": {
+    "title": "ماذا يقول <span>العملاء</span> عني",
+    "description": "آراء حقيقية من أشخاص عملت معهم وجهاً لوجه.",
+    "cta": {
+      "question": "هل عملنا معاً من قبل؟",
+      "subtext": "رأيك يساعدني على التطور ويساعد الآخرين في الوثوق بجودة عملي.",
+      "buttonText": "اترك تقييماً الآن"
+    }
+  },
+  "NewTestimonialPage": {
+    "cancel": "إلغاء",
+    "step": "خطوة {current} من {total}",
+    "title": "شارك قصتك",
+    "description": "ساعد الآخرين في فهم قيمة عملي من خلال مشاركة تجربتك الصادقة.",
+    "postingAs": "تنشر باسم {name}",
+    "verified": "حساب موثق",
+    "disclaimer": "بمجرد الإرسال، فإنك توافق على إمكانية عرض ملاحظاتك وتفاصيل ملفك الشخصي علنًا في هذا المعرض."
+  },
+
+  "AdminTestimonials": {
+    "adminPanel": "لوحة التحكم",
+    "moderationMode": "وضع الإدارة",
+    "moderationQueue": "قائمة المراجعة",
+    "moderationDescription": "إدارة آراء العملاء والتحكم في ظهورها في ملفك الشخصي.",
+    "total": "إجمالي التوصيات",
+    "pendingApproval": "قيد الانتظار",
+    "featured": "مميز",
+    "colClient": "العميل",
+    "colStatus": "الحالة",
+    "colRating": "التقييم",
+    "colActions": "إجراءات",
+    "statusLive": "منشور",
+    "statusPending": "قيد الانتظار",
+    "quickActions": "إجراءات سريعة",
+    "approve": "موافقة",
+    "unapprove": "إلغاء الموافقة",
+    "feature": "تمييز",
+    "unfeature": "إزالة التمييز",
+    "delete": "حذف",
+    "confirmDelete": "هل أنت متأكد؟ لا يمكن التراجع عن الحذف.",
+    "actionSuccess": "تم تنفيذ الإجراء بنجاح",
+    "actionError": "فشل تنفيذ الإجراء",
+    "noData": "لا توجد توصيات للمراجعة حالياً.",
+    "viewDetails": "عرض التفاصيل",
+    "testimonialDetail": "محتوى التوصية",
+    "submittedOn": "تم الإرسال في",
+    "close": "إغلاق",
+    "role": "الوظيفة "
+  },
+  "certificationForm":{
+		"title": "الشهادات",
+		"subtitle": "التراخيص والاعتمادات المهنية",
+		"addTitle": "إضافة شهادة جديدة",
+		"editTitle": "تعديل الشهادة",
+		"certName": "اسم الشهادة",
+		"certPlaceholder": "مثال: مطور معتمد من AWS",
+		"issuer": "الجهة المصدرة",
+		"issuerPlaceholder": "مثال:أمازون لخدمات الويب",
+		"issueDate": "تاريخ الإصدار",
+		"expireDate": "تاريخ الانتهاء (اختياري)",
+		"credentialId": "معرف الاعتماد",
+		"credentialIdPlaceholder": "ABC123DEF",
+		"credentialUrl": "رابط الاعتماد",
+		"urlPlaceholder": "https://...",
+		"assetTitle": "ملف الشهادة",
+		"save": "حفظ",
+		"update": "تحديث",
+		"cancel": "إلغاء",
+		"noData": "لا توجد شهادات مدرجة بعد.",
+		"issuedOn": "صدرت في:",
+		"uploadBtn": "اختر صورة",
+		"uploading": "جاري الرفع...",
+    "successUpdate":"الشهادة تم تحديثه بنجاح!",
+    "successCreate":"الشهادة تم إضافةها بنجاح!"
+	},
+  "BlogManager": {
+    "title": "إدارة المدونة",
+    "subtitle": "إنشاء وإدارة مقالاتك",
+    "newPost": "مقال جديد",
+    "editPost": "تعديل المقال",
+    "discardEdit": "إلغاء التعديل وإنشاء جديد",
+    "feed": "الموجز",
+    "noContent": "لا يوجد محتوى للغة {locale}",
+    "uncategorized": "بدون تصنيف",
+    "confirmDelete": "هل أنت متأكد من حذف هذا المقال نهائياً؟",
+    "slug": "الرابط الدائم",
+    "status": {
+      "live": "منشور",
+      "draft": "مسودة"
+    },
+    "toast": {
+      "published": "تم النشر بنجاح",
+      "updated": "تم التحديث بنجاح",
+      "deleted": "تم الحذف بنجاح",
+      "failed": "فشلت العملية"
+    }
+  },
+
+  "BlogForm": {
+    "tabs": {
+      "text": "النص",
+      "taxonomy": "التصنيف",
+      "media": "الوسائط",
+      "seo": "سيو"
+    },
+    "labels": {
+      "title": "عنوان المقال",
+      "slug": "رابط المقال",
+      "excerpt": "مقتطف",
+      "content": "محتوى المقال (Markdown)",
+      "category": "التصنيف",
+      "tags": "الوسوم",
+      "metaTitle": "عنوان الميتا (SEO)",
+      "metaDesc": "وصف الميتا",
+      "status": "الحالة",
+      "featuredImage": "الصورة البارزة"
+    },
+    "placeholders": {
+      "title": "مستقبل الذكاء الاصطناعي...",
+      "excerpt": "ملخص قصير...",
+      "content": "# ابدأ الكتابة هنا...",
+      "newTag": "وسم جديد...",
+      "metaTitle": "عنوان SEO مخصص...",
+      "metaDesc": "وصف SEO مخصص..."
+    },
+    "buttons": {
+      "newTag": "وسم جديد",
+      "save": "حفظ التغييرات",
+      "publish": "نشر المقال",
+      "removeImage": "إزالة الصورة"
+    },
+    "info": {
+      "oneCategory": "تصنيف واحد فقط",
+      "seo": "تساعد البيانات الوصفية محركات البحث. إذا تركت فارغة، فسيتم استخدام العنوان والمقتطف.",
+      "imageSize": "الحجم الموصى به: 1200x630 بكسل"
+    }
   }
 }

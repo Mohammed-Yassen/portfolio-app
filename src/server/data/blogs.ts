@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { Locale, Prisma } from "@prisma/client";
 import { BlogWithRelations, TransformedBlog } from "@/types/blog-types";
 
+// 1. Define the include structure (Shared)
 const blogInclude = (locale: Locale) =>
 	({
 		category: {
@@ -15,6 +16,7 @@ const blogInclude = (locale: Locale) =>
 		_count: { select: { likes: true, comments: true } },
 	} satisfies Prisma.BlogInclude);
 
+// 2. Define the transformation logic (Shared)
 const transformBlog = (
 	blog: BlogWithRelations,
 	locale: Locale,
@@ -45,16 +47,38 @@ const transformBlog = (
 	};
 };
 
+// 3. Get All Blogs
 export const getBlogs = async (locale: Locale): Promise<TransformedBlog[]> => {
 	try {
 		const blogs = await prisma.blog.findMany({
 			include: blogInclude(locale),
 			orderBy: { publishedAt: "desc" },
+			// Optional: only fetch published blogs
+			where: { isPublished: true },
 		});
-		// Cast to ensure TS recognizes the include structure
 		return (blogs as BlogWithRelations[]).map((b) => transformBlog(b, locale));
 	} catch (error) {
 		console.error("GET_BLOGS_ERROR", error);
 		return [];
+	}
+};
+
+// 4. Get Single Blog by ID
+export const getBlogById = async (
+	id: string,
+	locale: Locale,
+): Promise<TransformedBlog | null> => {
+	try {
+		const blog = await prisma.blog.findUnique({
+			where: { id },
+			include: blogInclude(locale),
+		});
+
+		if (!blog) return null;
+
+		return transformBlog(blog as BlogWithRelations, locale);
+	} catch (error) {
+		console.error("GET_BLOG_BY_ID_ERROR", error);
+		return null;
 	}
 };

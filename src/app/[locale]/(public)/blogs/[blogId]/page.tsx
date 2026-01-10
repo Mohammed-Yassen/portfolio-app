@@ -1,22 +1,19 @@
 /** @format */
 import { notFound } from "next/navigation";
-import {
-	Calendar,
-	Clock,
-	ArrowLeft,
-	Share2,
-	MoreHorizontal,
-} from "lucide-react";
-import Link from "next/link";
+import { Clock, Share2, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
-import { MotionViewport } from "@/components/motion-viewport";
-import { getBlogById } from "@/data/blogs";
-import ReadingProgress from "@/components/reading-progress";
+import { enUS, arSA } from "date-fns/locale";
+
+import { getBlogById } from "@/server/data/blogs";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BackButton } from "@/components/back-button";
+import { getTranslations } from "next-intl/server";
+import Image from "next/image";
+import { Locale } from "@prisma/client";
+import { MotionSection } from "@/components/shared/motion-viewport";
+import ReadingProgress from "@/components/reading-progress";
 
-// Dynamic read time based on word count (approx 200 wpm)
 const calculateReadTime = (content: string) => {
 	const words = content.replace(/<[^>]*>/g, "").split(/\s+/).length;
 	return Math.ceil(words / 200);
@@ -25,27 +22,31 @@ const calculateReadTime = (content: string) => {
 export default async function BlogDetailPage({
 	params,
 }: {
-	params: Promise<{ blogId: string }>;
+	params: Promise<{ blogId: string; locale: Locale }>;
 }) {
-	const { blogId } = await params;
-	const post = await getBlogById(blogId);
+	const { blogId, locale } = await params;
+	const post = await getBlogById(blogId, locale);
 
 	if (!post) notFound();
 
+	const t = await getTranslations("BlogDetail");
+	const isAr = locale === "ar";
+	const dateLocale = isAr ? arSA : enUS;
 	const readTime = calculateReadTime(post.content);
 
 	return (
-		<div className='min-h-screen bg-background pb-24 selection:bg-primary/10'>
+		<div
+			className='min-h-screen bg-background pb-24 selection:bg-primary/10'
+			dir={isAr ? "rtl" : "ltr"}>
 			<ReadingProgress />
 
-			{/* Navigation - Ultra Clean */}
+			{/* Navigation */}
 			<nav className='fixed top-0 w-full z-40 bg-background/80 backdrop-blur-md border-b border-border/50 py-3'>
 				<div className='container mx-auto px-6 max-w-5xl flex justify-between items-center'>
 					<BackButton
-						title='Back to home'
-						// fallback='/'
+						title={t("backToHome")}
 						variant='ghost'
-						className='hover:bg-transparent -ml-2'
+						className={cn("hover:bg-transparent", isAr ? "-mr-2" : "-ml-2")}
 					/>
 					<div className='flex items-center gap-4'>
 						<button className='p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground'>
@@ -58,18 +59,21 @@ export default async function BlogDetailPage({
 			<article className='pt-32'>
 				{/* Header Section */}
 				<header className='container mx-auto px-6 max-w-3xl mb-12'>
-					<MotionViewport preset='fadeInUp'>
+					<MotionSection preset='fadeInUp'>
 						<div className='flex items-center gap-2 mb-6'>
 							<span className='bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest'>
-								{post.category}
+								{post.categoryName}
 							</span>
 						</div>
 
-						<h1 className='text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8 leading-[1.05] text-balance'>
+						<h1
+							className={cn(
+								"text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8 leading-[1.05] text-balance",
+								isAr && "font-sans tracking-normal",
+							)}>
 							{post.title}
 						</h1>
 
-						{/* Author/Meta Section - Medium Style */}
 						<div className='flex items-center justify-between border-y border-border/60 py-6 mb-12'>
 							<div className='flex items-center gap-3'>
 								<Avatar className='h-10 w-10 border'>
@@ -81,12 +85,14 @@ export default async function BlogDetailPage({
 									<div className='flex items-center gap-2 text-xs text-muted-foreground'>
 										<time dateTime={post.publishedAt?.toString()}>
 											{post.publishedAt
-												? format(new Date(post.publishedAt), "MMM dd, yyyy")
-												: "Draft"}
+												? format(new Date(post.publishedAt), "MMM dd, yyyy", {
+														locale: dateLocale,
+												  })
+												: t("draft")}
 										</time>
 										<span>•</span>
 										<span className='flex items-center gap-1'>
-											<Clock size={12} /> {readTime} min read
+											<Clock size={12} /> {readTime} {t("readTime")}
 										</span>
 									</div>
 								</div>
@@ -95,51 +101,45 @@ export default async function BlogDetailPage({
 								<MoreHorizontal size={20} />
 							</button>
 						</div>
-					</MotionViewport>
+					</MotionSection>
 				</header>
 
 				{/* Hero Image */}
 				<div className='container mx-auto px-6 max-w-5xl mb-16'>
-					<MotionViewport
+					<MotionSection
 						preset='scaleUp'
 						className='relative rounded-2xl overflow-hidden shadow-sm border bg-muted'>
-						<img
+						<Image
 							src={post.image || "/placeholder.jpg"}
 							alt={post.title}
+							width={1200}
+							height={600}
+							unoptimized
 							className='w-full aspect-[21/9] object-cover'
 						/>
-					</MotionViewport>
+					</MotionSection>
 				</div>
 
 				{/* Main Content Body */}
-				<div className='container mx-auto px-6 max-w-[740px]'>
+				<div className='container mx-auto px-6 max-w-185'>
 					<div
 						className={cn(
 							"prose prose-lg dark:prose-invert max-w-none",
-							// Content Typography: Serif is key for the "Medium" feel
-							"prose-p:font-serif prose-p:text-[21px] prose-p:leading-[1.6] prose-p:mb-8 prose-p:text-zinc-800 dark:prose-p:text-zinc-200",
-							// Headings Styling
+							// Content Typography: Use Sans for Arabic as Serif doesn't always look good
+							isAr ? "prose-p:font-sans" : "prose-p:font-serif",
+							"prose-p:text-[21px] prose-p:leading-[1.6] prose-p:mb-8 prose-p:text-zinc-800 dark:prose-p:text-zinc-200",
 							"prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tighter prose-headings:mt-12 prose-headings:mb-6",
 							"prose-h2:text-3xl prose-h3:text-2xl",
-							// Diagram/Image Handling (Crucial for your Transformer images)
-							"prose-img:rounded-xl prose-img:shadow-none prose-img:my-10 prose-img:mx-auto prose-img:border prose-img:border-border/40",
-							// Code Block refinement (Fixing your dark screenshot issue)
-							"prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-border/50 prose-pre:rounded-xl prose-pre:p-6 prose-pre:my-8",
-							"prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-medium prose-code:before:content-none prose-code:after:content-none",
-							// Quotes
-							"prose-blockquote:border-l-primary prose-blockquote:border-l-[3px] prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-2xl prose-blockquote:text-zinc-500 prose-blockquote:font-serif",
+							"prose-img:rounded-xl prose-img:my-10 prose-img:border",
+							"prose-pre:bg-[#0d1117] prose-pre:border prose-pre:rounded-xl prose-pre:p-6",
+							"prose-code:bg-muted prose-code:px-1.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none",
+							isAr
+								? "prose-blockquote:border-r-primary prose-blockquote:border-r-[3px] prose-blockquote:border-l-0 prose-blockquote:pr-6"
+								: "prose-blockquote:border-l-primary prose-blockquote:border-l-[3px] prose-blockquote:pl-6",
+							"prose-blockquote:italic prose-blockquote:text-2xl prose-blockquote:text-zinc-500 prose-blockquote:font-serif",
 						)}
 						dangerouslySetInnerHTML={{ __html: post.content }}
 					/>
-
-					{/* Tags Footer */}
-					<div className='mt-16 pt-8 border-t flex flex-wrap gap-2'>
-						{post.category && (
-							<span className='px-3 py-1 bg-muted rounded-full text-xs font-medium hover:bg-secondary cursor-pointer transition-colors'>
-								#{post.category.toLowerCase()}
-							</span>
-						)}
-					</div>
 				</div>
 			</article>
 		</div>

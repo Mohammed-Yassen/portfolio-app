@@ -1,5 +1,44 @@
 /** @format */
 
+import * as z from "zod";
+
+// 1. Sub-schemas for better modularity
+export const SocialLinkSchema = z.object({
+	id: z.string().cuid().optional(),
+	name: z.string().min(1, "Title is required").max(50),
+	url: z.string().url("Please enter a valid URL"),
+	icon: z.string().optional().nullable(),
+});
+export const UserRoleEnum = z.enum(["ADMIN", "USER", "SUPER_ADMIN"]);
+
+// 2. Main Profile Schema
+export const ProfileSchema = z.object({
+	name: z.string().min(2, "Name must be at least 2 characters").max(100),
+	phone: z
+		.string()
+		.regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format") // E.164 format check
+		.optional()
+		.nullable()
+		.or(z.literal("")),
+	professionalEmail: z.string().email("Invalid professional email"),
+	resumeUrl: z
+		.string()
+		.url("Invalid resume URL")
+		.optional()
+		.nullable()
+		.or(z.literal("")),
+	role: UserRoleEnum,
+	image: z.string().url().optional().nullable().or(z.literal("")),
+	profileId: z.string().cuid().optional(),
+	locale: z.string().optional().nullable().or(z.literal("")),
+	bio: z.string().optional().nullable().or(z.literal("")),
+	location: z.string().optional().nullable().or(z.literal("")),
+
+	socials: z.array(SocialLinkSchema).default([]),
+});
+
+// 3. Derived Types
+export type ProfileFormValues = z.infer<typeof ProfileSchema>;
 // /** @format */
 // /** @format */
 // import * as z from "zod";

@@ -1,116 +1,162 @@
 /** @format */
+"use server";
 
-// /** @format */
-// "use server";
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { ProfileFormValues, ProfileSchema } from "../validations/user";
+import { UserRole } from "@prisma/client";
+import { getUserRole } from "../data/users";
 
-// import { db } from "@/lib/db";
-// import { revalidatePath } from "next/cache";
-// import {
-// 	profileSchema,
-// 	userSchema,
-// 	socialLinkSchema,
-// 	IdentityValues,
-// 	IdentitySchema,
-// } from "@/lib/validations/user";
-// import z from "zod";
+export async function updateProfile(values: ProfileFormValues) {
+	try {
+		// 1. Session & Identity Verification
+		const session = await auth();
+		const userId = session?.user?.id;
 
-// /** --- IDENTITY & ACCOUNT (USER + PROFILE) --- */
-// /** @format */
-// // actions/user.ts
+		if (!userId) {
+			return { error: "Session expired. Please log in again." };
+		}
 
-// /** @format */
+		// 2. Server-side Validation
+		const validatedFields = ProfileSchema.safeParse(values);
+		if (!validatedFields.success) {
+			return { error: "Validation failed. Please check your inputs." };
+		}
 
-// export async function updateIdentity(userId: string, values: IdentityValues) {
-// 	try {
-// 		// 1. Validate against the schema
-// 		const validated = IdentitySchema.safeParse(values);
+		const {
+			name,
+			image,
+			phone,
+			professionalEmail,
+			resumeUrl,
+			socials,
+			bio,
+			location,
+		} = validatedFields.data;
 
-// 		if (!validated.success) {
-// 			console.error("❌ Zod Error:", validated.error.flatten().fieldErrors);
-// 			return { error: "Check your inputs. Some fields are invalid." };
-// 		}
+		// 3. Execution via ACID Transaction
+		await prisma.$transaction(async (tx) => {
+			// Verify role within the transaction for data consistency
+			const user = await tx.user.findUnique({
+				where: { id: userId },
+				select: { role: true },
+			});
 
-// 		const { name, image, ...profileData } = validated.data;
+			if (!user || user.role !== UserRole.ADMIN) {
+				throw new Error("UNAUTHORIZED");
+			}
 
-// 		// 2. Perform Transaction
-// 		await db.$transaction(async (tx) => {
-// 			// Update User
-// 			await tx.user.update({
-// 				where: { id: userId },
-// 				data: {
-// 					name,
-// 					image: image || null,
-// 				},
-// 			});
+			// A. Update Base User
+			await tx.user.update({
+				where: { id: userId },
+				data: {
+					name: name.trim(),
+					image: image || null,
+				},
+			});
 
-// 			// Update or Create Profile
-// 			// We use the userId to find the profile, but set the ID to "owner-static" if creating
-// 			await tx.profile.upsert({
-// 				where: { userId: userId },
-// 				update: {
-// 					professionalEmail: profileData.professionalEmail,
-// 					location: profileData.location || null,
-// 					phone: profileData.phone || null,
-// 					availability: profileData.availability,
-// 				},
-// 				create: {
-// 					id: "owner-static", // Match your schema's default ID
-// 					userId: userId,
-// 					professionalEmail: profileData.professionalEmail,
-// 					location: profileData.location || "Remote / Yemen",
-// 					phone: profileData.phone || null,
-// 					availability: profileData.availability,
-// 				},
-// 			});
-// 		});
+			// B. Upsert Profile & Nested Translations
+			const profile = await tx.profile.upsert({
+				where: { userId },
+				create: {
+					userId,
+					phone: phone?.trim() || null,
+					professionalEmail: professionalEmail.trim().toLowerCase(),
+					resumeUrl: resumeUrl || null,
+					translations: {
+						create: {
+							locale: "en", // Default locale
+							bio: bio?.trim() || "",
+							location: location?.trim() || "",
+						},
+					},
+				},
+				update: {
+					phone: phone?.trim() || null,
+					professionalEmail: professionalEmail.trim().toLowerCase(),
+					resumeUrl: resumeUrl || null,
+					translations: {
+						// Senior approach: Delete existing to avoid duplicates in simple schemas
+						// or use an upsert if you have translation IDs.
+						deleteMany: { locale: "en" },
+						create: {
+							locale: "en",
+							bio: bio?.trim() || "",
+							location: location?.trim() || "",
+						},
+					},
+				},
+			});
 
-// 		revalidatePath("/admin/settings");
-// 		return { success: "Identity and Profile synced!" };
-// 	} catch (error: any) {
-// 		console.error("Prisma Error:", error.message);
-// 		return { error: "Database transaction failed." };
-// 	}
-// }
-// /** --- SOCIAL LINKS (CRUD) --- */
-// export async function createSocialLink(
-// 	values: z.infer<typeof socialLinkSchema>,
-// ) {
-// 	const validated = socialLinkSchema.safeParse(values);
-// 	if (!validated.success) return { error: "Invalid input" };
+			// C. Sync Social Links (Delete + Recreate is safer for nested arrays)
+			await tx.socialLinks.deleteMany({ where: { profileId: profile.id } });
 
-// 	try {
-// 		const link = await db.socialLinks.create({
-// 			data: { ...validated.data, profileId: "owner-static" },
-// 		});
-// 		revalidatePath("/admin/settings");
-// 		return { success: "Platform added!", data: link };
-// 	} catch (error) {
-// 		return { error: "Creation failed" };
-// 	}
-// }
+			if (socials && socials.length > 0) {
+				await tx.socialLinks.createMany({
+					data: socials.map((s) => ({
+						profileId: profile.id,
+						name: s.name.trim(),
+						url: s.url.trim(),
+						icon: s.icon || null,
+					})),
+				});
+			}
+		});
 
-// export async function updateSocialLink(
-// 	id: string,
-// 	values: z.infer<typeof socialLinkSchema>,
-// ) {
-// 	const validated = socialLinkSchema.safeParse(values);
-// 	if (!validated.success) return { error: "Invalid input" };
+		// 4. Cache Management
+		revalidatePath("/admin/users");
+		return { success: "Profile and administrative settings updated." };
+	} catch (error: unknown) {
+		// Senior approach: Check if it's an instance of the Error object
+		if (error instanceof Error && error.message === "UNAUTHORIZED") {
+			return { error: "Access denied: Insufficient permissions." };
+		}
 
-// 	try {
-// 		await db.socialLinks.update({ where: { id }, data: validated.data });
-// 		revalidatePath("/admin/settings");
-// 		return { success: "Platform updated!" };
-// 	} catch (error) {
-// 		return { error: "Update failed" };
-// 	}
-// }
+		// Log the actual error for server-side debugging
+		console.error("[UPDATE_PROFILE_ACTION_ERROR]:", error);
 
-// export async function deleteSocialLink(id: string) {
-// 	try {
-// 		await db.socialLinks.delete({ where: { id } });
-// 		revalidatePath("/admin/settings");
-// 		return { success: "Platform removed" };
-// 	} catch (error) {
-// 		return { error: "Delete failed" };
-// 	}
-// }
+		return { error: "A server error occurred during update." };
+	}
+}
+/** @format */
+// Helper to verify Admin
+async function verifyAdmin() {
+	const session = await auth();
+	if (!session?.user?.id) {
+		throw new Error("Unauthorized");
+	}
+	const userRole = await getUserRole(session?.user?.id);
+	if (userRole !== UserRole.ADMIN) {
+		throw new Error("Unauthorized");
+	}
+
+	return session.user.id;
+}
+
+export async function updateRole(userId: string, role: UserRole) {
+	try {
+		const adminId = await verifyAdmin();
+		if (userId === adminId)
+			return { error: "You cannot change your own role ." };
+
+		await prisma.user.update({ where: { id: userId }, data: { role } });
+		revalidatePath("/admin/users");
+		return { success: "Role updated." };
+	} catch (e) {
+		return { error: "Failed to update role." };
+	}
+}
+
+export async function deleteUser(userId: string) {
+	try {
+		const adminId = await verifyAdmin();
+		if (userId === adminId) return { error: "You cannot delete yourself." };
+
+		await prisma.user.delete({ where: { id: userId } });
+		revalidatePath("/admin/users");
+		return { success: "User deleted." };
+	} catch (e) {
+		return { error: "Failed to delete user." };
+	}
+}

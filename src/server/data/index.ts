@@ -276,3 +276,47 @@ export const getEducations = unstable_cache(
 		tags: ["educations"],
 	},
 );
+import { TransformedCertification } from "@/types";
+
+export const getCertifications = unstable_cache(
+	async (locale: Locale): Promise<TransformedCertification[]> => {
+		try {
+			const certifications = await prisma.certification.findMany({
+				orderBy: { issueDate: "desc" },
+				include: {
+					translations: {
+						where: { locale },
+					},
+				},
+			});
+
+			return certifications.map((cert) => ({
+				id: cert.id,
+				issuer: cert.issuer,
+				coverUrl: cert.coverUrl,
+				link: cert.link,
+				issueDate: cert.issueDate.toISOString(),
+				expireDate: cert.expireDate?.toISOString() || null,
+				credentialUrl: cert.credentialUrl,
+				isActive: cert.isActive,
+				updatedAt: cert.updatedAt.toISOString(),
+
+				// Safe extraction for current locale
+				title: cert.translations[0]?.title || `No ${locale} title set`,
+				credentialId: cert.translations[0]?.credentialId || null,
+				description: cert.translations[0]?.description || null,
+
+				// Full translations for the edit form state
+				translations: cert.translations,
+			}));
+		} catch (error) {
+			console.error("Failed to fetch certifications:", error);
+			return [];
+		}
+	},
+	["certifications-lists"],
+	{
+		revalidate: 3600,
+		tags: ["certifications"],
+	},
+);

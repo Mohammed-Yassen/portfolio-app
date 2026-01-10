@@ -4,7 +4,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Locale, Availability } from "@prisma/client";
 import { MotionSection } from "../shared/motion-viewport";
 import { HeroData } from "@/types";
+import { useIsMounted } from "@/app/hooks/is-mounted";
 
 const STATUS_THEMES: Record<
 	Availability,
@@ -232,8 +233,10 @@ export const HeroSection = ({ data, locale }: HeroSectionProps) => {
 								<Image
 									src={primaryImage || "/profile.png"}
 									alt={content.name}
-									fill
 									className='object-cover transition-transform duration-700 group-hover:scale-110'
+									width={1920}
+									height={1080}
+									unoptimized // <--- Add this!
 									priority
 								/>
 

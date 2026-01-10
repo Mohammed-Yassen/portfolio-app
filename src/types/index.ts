@@ -127,3 +127,26 @@ export interface TransformedEducation {
 		description: string | null;
 	}[];
 }
+export interface TransformedCertification {
+	id: string;
+	issuer: string;
+	coverUrl: string | null;
+	link: string | null;
+	issueDate: string;
+	expireDate: string | null;
+	credentialUrl: string | null;
+	isActive: boolean;
+	updatedAt: string;
+
+	// Translation fields
+	title: string;
+	credentialId: string | null;
+	description: string | null;
+
+	translations: {
+		locale: Locale;
+		title: string;
+		credentialId: string | null;
+		description: string | null;
+	}[];
+}

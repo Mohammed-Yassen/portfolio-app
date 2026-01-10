@@ -53,6 +53,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { IconPicker } from "@/components/icon-picker";
 import { Separator } from "@/components/ui/separator";
 import { useIsMounted } from "@/app/hooks/is-mounted";
+import { RichTextEditor } from "@/components/tiptap/rich-text-editor";
 
 interface ProjectFormProps {
 	locale: Locale;
@@ -439,11 +440,19 @@ export function ProjectForm({
 						<FormFieldWrapper
 							control={form.control}
 							name='content'
+							label='Article Body'>
+							{(field) => (
+								<RichTextEditor value={field.value} onChange={field.onChange} />
+							)}
+						</FormFieldWrapper>
+						{/* <FormFieldWrapper
+							control={form.control}
+							name='content'
 							label='Detailed Story (Markdown)'>
 							{(field) => (
 								<Textarea rows={8} {...field} value={field.value ?? ""} />
 							)}
-						</FormFieldWrapper>
+						</FormFieldWrapper> */}
 					</TabsContent>
 					{/* Additional TabsContent for media, links, content... */}
 				</Tabs>
@@ -525,8 +534,9 @@ function ImageUploaders({ form }: { form: UseFormReturn<ProjectFormValues> }) {
 						<div className='relative aspect-video w-full max-w-sm rounded-xl overflow-hidden border shadow-lg group'>
 							<Image
 								src={image}
-								width={500}
-								height={500}
+								width={1920}
+								height={1080}
+								unoptimized // <--- Add this!
 								className='w-full h-full object-cover'
 								alt='Cover'
 							/>
@@ -560,9 +570,10 @@ function ImageUploaders({ form }: { form: UseFormReturn<ProjectFormValues> }) {
 								key={idx}
 								className='relative aspect-square rounded-xl overflow-hidden border group'>
 								<Image
-									src={image}
-									width={500}
-									height={500}
+									src={url}
+									width={1920}
+									height={1080}
+									unoptimized // <--- Add this!
 									className='w-full h-full object-cover'
 									alt='Gallery'
 								/>

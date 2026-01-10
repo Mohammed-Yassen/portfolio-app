@@ -1,18 +1,24 @@
-import { useState, useEffect } from 'react'
+/** @format */
+import { useSyncExternalStore, useCallback } from "react";
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+	// 1. Subscribe function: tells React how to listen for changes
+	const subscribe = useCallback(
+		(callback: () => void) => {
+			const matchMedia = window.matchMedia(query);
+			matchMedia.addEventListener("change", callback);
+			return () => matchMedia.removeEventListener("change", callback);
+		},
+		[query],
+	);
 
-  useEffect(() => {
-    const media = window.matchMedia(query)
-    if (media.matches !== matches) {
-      setMatches(media.matches)
-    }
-    const listener = () => setMatches(media.matches)
-    window.addEventListener('resize', listener)
-    return () => window.removeEventListener('resize', listener)
-  }, [matches, query])
+	// 2. Get snapshot: tells React how to read the current value
+	const getSnapshot = () => {
+		return window.matchMedia(query).matches;
+	};
 
-  return matches
+	// 3. Server snapshot: tells Next.js what to assume during SSR (usually false)
+	const getServerSnapshot = () => false;
+
+	return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
-

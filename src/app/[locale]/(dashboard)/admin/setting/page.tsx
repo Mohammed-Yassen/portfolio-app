@@ -11,6 +11,8 @@ import {
 	Briefcase,
 	type LucideIcon,
 	GraduationCap,
+	Activity,
+	Award,
 } from "lucide-react";
 import { Locale } from "@prisma/client";
 
@@ -20,19 +22,23 @@ import {
 	getSkills,
 	getExperiences,
 	getEducations,
+	getCertifications,
 } from "@/server/data";
 import {
 	DashboardAboutSkeleton,
 	DashboardHeroSkeleton,
 	DashboardSkillSkeleton,
 } from "@/components/dashboard/dash-skeleton";
-import { AboutLoader, HeroLoader } from "./setting-looder";
 import { AboutForm } from "@/components/dashboard/dash-form/about-form";
-import { AboutData } from "@/types";
 import { HeroForm } from "@/components/dashboard/dash-form/hero-form";
 import { SkillsForm } from "@/components/dashboard/dash-form/skills-form";
 import { ExperienceForm } from "@/components/dashboard/dash-form/experienc-form";
 import { EducationForm } from "@/components/dashboard/dash-form/education-form";
+import prisma from "@/lib/prisma";
+import { SectionActivationClient } from "@/components/dashboard/dash-form/sections-activation";
+import { CertificationForm } from "@/components/dashboard/dash-form/certification-form";
+import { CertificationsSkeleton } from "@/components/sections/sections-skeleton";
+import { FaCertificate } from "react-icons/fa";
 
 interface Props {
 	params: Promise<{ locale: string }>;
@@ -107,6 +113,20 @@ export default async function ControlPage({ params, searchParams }: Props) {
 							locale={validLocale}
 							// disabled
 						/>
+						<TabNav
+							trigger='certification'
+							icon={Award}
+							label='Certification'
+							locale={validLocale}
+							// disabled
+						/>
+						<TabNav
+							trigger='activations'
+							icon={Activity}
+							label='Activations'
+							locale={validLocale}
+							// disabled
+						/>
 					</TabsList>
 
 					{/* Content Areas with Fixed Minimum Heights to reduce jitter */}
@@ -135,6 +155,17 @@ export default async function ControlPage({ params, searchParams }: Props) {
 						<TabsContent value='education' className='outline-none m-0'>
 							<Suspense fallback={<DashboardSkillSkeleton />}>
 								<EducationTabContent locale={validLocale} />
+							</Suspense>
+						</TabsContent>
+						<TabsContent value='certification' className='outline-none m-0'>
+							<Suspense fallback={<CertificationsSkeleton />}>
+								<CertificationTabContent locale={validLocale} />
+							</Suspense>
+						</TabsContent>
+
+						<TabsContent value='activations' className='outline-none m-0'>
+							<Suspense fallback={<DashboardSkillSkeleton />}>
+								<ActiveTabContent locale={validLocale} />
 							</Suspense>
 						</TabsContent>
 					</div>
@@ -173,6 +204,19 @@ async function EducationTabContent({ locale }: { locale: Locale }) {
 	const data = await getEducations(locale);
 	if (!data) return null;
 	return <EducationForm initialData={data} locale={locale} />;
+}
+async function CertificationTabContent({ locale }: { locale: Locale }) {
+	const data = await getCertifications(locale);
+	if (!data) return null;
+	return <CertificationForm initialData={data} locale={locale} />;
+}
+async function ActiveTabContent({ locale }: { locale: Locale }) {
+	const config = await prisma.sectionActive.findUnique({
+		where: { id: "ui-config" },
+	});
+	console.log("active config", config);
+	// if (!config) return null;
+	return <SectionActivationClient config={config} locale={locale} />;
 }
 
 function TabNav({

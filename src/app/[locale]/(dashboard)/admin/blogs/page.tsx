@@ -46,7 +46,7 @@ export default async function BlogsControlPage({ params }: Props) {
 	}));
 
 	return (
-		<div className='p-4 md:px-8 space-y-8 bg-zinc-50 dark:bg-zinc-950 min-h-screen'>
+		<div className='p-2 md:px-8 space-y-8 bg-zinc-50 dark:bg-zinc-950 min-h-screen'>
 			<header className='flex justify-between items-end max-w-7xl mx-auto'>
 				<div>
 					<h1 className='text-4xl font-black text-zinc-900 dark:text-white uppercase tracking-tighter'>
@@ -59,7 +59,7 @@ export default async function BlogsControlPage({ params }: Props) {
 						</span>
 					</p>
 				</div>
-				<div className='hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border rounded-2xl shadow-sm'>
+				<div className='hidden md:flex items-center gap-2 py-2 bg-white dark:bg-zinc-900 border rounded-2xl shadow-sm'>
 					<div className='w-2 h-2 rounded-full bg-emerald-500' />
 					<span className='text-[10px] font-black uppercase text-zinc-400'>
 						System Active: {new Date().getFullYear()}

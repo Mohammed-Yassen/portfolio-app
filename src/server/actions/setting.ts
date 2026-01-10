@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import {
 	HeroFormValues,
 	heroSchema,
+	sectionActiveSchema,
+	SectionActiveValues,
 	SkillCategoryFormValue,
 	skillCategorySchema,
 } from "@/server/validations";
@@ -326,10 +328,7 @@ export async function upsertSkillCategoryAction(data: SkillCategoryFormValue) {
 		return { success: false, error: "Database operation failed" };
 	}
 }
-/**
- * Delete a skill category (cascade deletes skills & translations)
- */
-// actions/skill-category.ts
+
 export async function deleteSkillCategoryAction(id: string) {
 	if (!id) return { success: false, error: "ID is required" };
 
@@ -491,6 +490,7 @@ export async function deleteExperienceAction(id: string) {
 /** @format */
 
 import { educationSchema, EducationFormValue } from "@/server/validations";
+import { auth } from "@/auth";
 
 export async function upsertEducationAction(data: EducationFormValue) {
 	// 1. Server-side validation
@@ -627,5 +627,161 @@ export async function deleteEducationAction(id: string) {
 	} catch (error) {
 		console.error("DELETE_EDUCATION_ERROR:", error);
 		return { success: false, error: "Failed to delete education record" };
+	}
+}
+
+/** @format */
+
+export async function updateSectionStatus(values: SectionActiveValues) {
+	try {
+		// 1. Authorization Guard
+		const session = await auth();
+		const isAdmin = true;
+		// session?.user?.role === "ADMIN" ||
+		// session?.user?.email === process.env.ADMIN_EMAIL;
+		if (!isAdmin) return { error: "UNAUTHORIZED_ACCESS" };
+
+		// 2. Validate Input
+		const validatedFields = sectionActiveSchema.safeParse(values);
+		if (!validatedFields.success) {
+			return { error: "INVALID_SCHEMA_DATA" };
+		}
+
+		// 3. Database Operation
+		await prisma.sectionActive.upsert({
+			where: { id: "ui-config" },
+			update: validatedFields.data,
+			create: {
+				id: "ui-config",
+				...validatedFields.data,
+			},
+		});
+
+		// 4. Cache Clearing
+		revalidatePath("/", "layout"); // Update public site
+		revalidatePath("/admin/settings"); // Update admin dashboard
+
+		return { success: "CONFIG_SYNCED" };
+	} catch (error) {
+		// Log the actual error to your terminal for debugging
+		console.error("[SECTION_UPDATE_ERROR]:", error);
+		return { error: "DATABASE_SYNC_FAILED" };
+	}
+}
+
+// /generate write actions for certification create ,update and delete based on schema  model Certification {   id            String    @id @default(cuid())   issuer        String   coverUrl      String?   link          String? // External link to verify   issueDate     DateTime   expireDate    DateTime?   credentialUrl String?   isActive      Boolean   @default(true)    translations CertificationTranslation[]   createdAt    DateTime                   @default(now())   updatedAt    DateTime                   @updatedAt }  model CertificationTranslation {   id           String  @id @default(cuid())   locale       Locale   title        String // e.g., "AWS Certified Solutions Architect"   credentialId String?    description     String?       @db.Text   certificationId String   certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)    @@unique([certificationId, locale]) }
+
+import {
+	certificationSchema,
+	type CertificationFormValue,
+} from "@/server/validations";
+
+/**
+ * Standardized Action Response Type
+ */
+type ActionResponse<T = undefined> =
+	| { success: true; data?: T; message?: string }
+	| { success: false; error: string };
+
+/**
+ * Creates or updates a certification and its associated translation.
+ */
+export async function upsertCertificationAction(
+	rawInput: CertificationFormValue,
+): Promise<ActionResponse<{ id: string }>> {
+	// 1. Validate Input
+	const validated = certificationSchema.safeParse(rawInput);
+
+	if (!validated.success) {
+		return {
+			success: false,
+			error: `Validation failed: ${validated.error?.issues
+				.map((e) => e.message)
+				.join(", ")}`,
+		};
+	}
+
+	const { id, locale, title, credentialId, description, ...baseData } =
+		validated.data;
+
+	try {
+		const result = await prisma.$transaction(async (tx) => {
+			// 2. Manage Translations
+			// If updating, we replace the translation for the specific locale
+			if (id) {
+				await tx.certificationTranslation.deleteMany({
+					where: { certificationId: id, locale },
+				});
+			}
+
+			// 3. Perform Upsert
+			// We use a specific ID if provided, otherwise Prisma generates a new CUID/UUID
+			return await tx.certification.upsert({
+				where: { id: id ?? "" },
+				update: {
+					...baseData,
+					issueDate: new Date(baseData.issueDate),
+					expireDate: baseData.expireDate
+						? new Date(baseData.expireDate)
+						: null,
+					translations: {
+						create: {
+							locale,
+							title,
+							credentialId: credentialId || null,
+							description: description || null,
+						},
+					},
+				},
+				create: {
+					...baseData,
+					issueDate: new Date(baseData.issueDate),
+					expireDate: baseData.expireDate
+						? new Date(baseData.expireDate)
+						: null,
+					translations: {
+						create: {
+							locale,
+							title,
+							credentialId: credentialId || null,
+							description: description || null,
+						},
+					},
+				},
+			});
+		});
+
+		revalidatePath("/", "layout");
+		return { success: true, data: { id: result.id } };
+	} catch (error) {
+		console.error("[UPSERT_CERTIFICATION_ERROR]", error);
+		return { success: false, error: "An unexpected database error occurred." };
+	}
+}
+
+/**
+ * Deletes a certification.
+ * Assumes 'onDelete: Cascade' is set in the Prisma Schema for translations.
+ */
+export async function deleteCertificationAction(
+	id: string,
+): Promise<ActionResponse> {
+	if (!id)
+		return { success: false, error: "A valid ID is required for deletion." };
+
+	try {
+		await prisma.certification.delete({
+			where: { id },
+		});
+
+		revalidatePath("/", "layout");
+		return { success: true, message: "Certification deleted successfully." };
+	} catch (error) {
+		console.error("[DELETE_CERTIFICATION_ERROR]", error);
+		return {
+			success: false,
+			error:
+				"Failed to delete certification. It may have already been removed.",
+		};
 	}
 }
