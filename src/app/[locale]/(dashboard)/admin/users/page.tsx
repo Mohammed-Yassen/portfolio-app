@@ -16,28 +16,16 @@ import {
 } from "@/server/data/users";
 import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
+import { protectSuperAdmin } from "@/lib/admin-guard";
+interface AdminPageProps {
+	params: Promise<{ locale: string }>;
+}
+export default async function AdminUsersPage({ params }: AdminPageProps) {
+	const { locale } = await params;
+	const session = await protectSuperAdmin();
 
-export default async function AdminUsersPage() {
-	const session = await auth();
-	// console.log(session, session?.user, session?.user.role);
-	const headersList = await headers();
-
-	// 1. Security Gate
-	const referer = headersList.get("referer");
-
-	// Guard: Critical for security
-	if (!session?.user?.id) {
-		redirect("/auth/sign-in");
-	}
 	const user = await getUserWithProfile(session?.user?.id as string);
 	console.log("UserWithProfile ", user);
-
-	if (!user) {
-		return redirect("/auth/sign-in");
-	}
-	if (user.role !== UserRole.ADMIN) {
-		return redirect("/");
-	}
 
 	// 2. Optimized Parallel Data Loading
 	const [users, totalUsers, adminCount] = await Promise.all([

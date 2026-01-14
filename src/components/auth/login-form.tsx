@@ -4,28 +4,29 @@
 import React, { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useTranslations } from "next-intl"; // Added
+import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 import { loginAction } from "@/server/actions/auth-actions";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { PasswordInput, FormError, FormSuccess } from "./auth-components";
 import { AuthContainer } from "./auth-container";
 import { FormFieldWrapper } from "../input-form-wrapper";
 import { LoginFormValues, loginSchema } from "@/server/validations/auth";
 
 export const SignInForm = () => {
+	const t = useTranslations("Auth"); // Use "Auth" namespace from your JSON files
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = React.useState<string | undefined>("");
 	const [success, setSuccess] = React.useState<string | undefined>("");
 	const searchParams = useSearchParams();
 
-	// Capture where the user came from
 	const callbackUrl = searchParams.get("callbackUrl");
-	const form = useForm<z.infer<typeof loginSchema>>({
+
+	const form = useForm<LoginFormValues>({
 		resolver: zodResolver(loginSchema),
 		defaultValues: { email: "", password: "" },
 	});
@@ -36,17 +37,17 @@ export const SignInForm = () => {
 
 		startTransition(() => {
 			loginAction(values, callbackUrl).then((data) => {
-				setError(data?.error);
-				setSuccess(data?.success);
+				if (data?.error) setError(t("errors.invalidCredentials"));
+				if (data?.success) setSuccess(t("success.loggedIn"));
 			});
 		});
 	};
 
 	return (
 		<AuthContainer
-			headerLabel='Welcome back'
-			description='Enter your credentials to access your account'
-			backButtonLabel="Don't have an account?"
+			headerLabel={t("welcomeBack")}
+			description={t("enterCredentials")}
+			backButtonLabel={t("noAccount")}
 			backButtonHref='/auth/sign-up'
 			showSocial>
 			<Form {...form}>
@@ -55,12 +56,12 @@ export const SignInForm = () => {
 						<FormFieldWrapper
 							control={form.control}
 							name='email'
-							label='Email Address'
+							label={t("emailLabel")}
 							disabled={isPending}>
 							{(field) => (
 								<Input
 									{...field}
-									placeholder='john.doe@example.com'
+									placeholder='email@example.com'
 									type='email'
 									autoComplete='email'
 								/>
@@ -70,7 +71,7 @@ export const SignInForm = () => {
 						<FormFieldWrapper
 							control={form.control}
 							name='password'
-							label='Password'
+							label={t("passwordLabel")}
 							disabled={isPending}>
 							{(field) => (
 								<PasswordInput
@@ -89,7 +90,7 @@ export const SignInForm = () => {
 						{isPending ? (
 							<Loader2 className='mr-2 h-4 w-4 animate-spin' />
 						) : (
-							"Sign In"
+							t("submitButton")
 						)}
 					</Button>
 				</form>

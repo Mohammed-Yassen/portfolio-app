@@ -4,11 +4,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { type Adapter } from "next-auth/adapters";
-import { UserRole } from "@prisma/client";
 import prisma from "./lib/prisma";
 import { loginSchema } from "./server/validations/auth";
-
+import { UserRole, UserStatus } from "@prisma/client";
+import { type Adapter } from "next-auth/adapters";
 export const { handlers, auth, signIn, signOut } = NextAuth({
 	adapter: PrismaAdapter(prisma) as Adapter,
 	session: { strategy: "jwt" },
@@ -23,50 +22,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 				const { email, password } = validated.data;
 				const user = await prisma.user.findUnique({ where: { email } });
 
-				// Security: OAuth users won't have a password
-				if (!user || !user.password) return null;
+				if (!user || !user.password || user.status !== "ACTIVE") return null;
 
 				const passwordsMatch = await bcrypt.compare(password, user.password);
-				if (passwordsMatch) return user;
+				if (!passwordsMatch) return null;
 
-				return null;
+				return user;
 			},
 		}),
 	],
 	callbacks: {
 		async jwt({ token, user, trigger }) {
-			// 1. On Login: Transfer data from Database (user) to the Token
 			if (user) {
+				token.sub = user.id;
 				token.role = user.role;
-				token.name = user.name;
-				token.email = user.email;
+				token.status = user.status;
 			}
 
-			// 2. On Demand: Update session data without re-logging
-			if (trigger === "update") {
-				const existingUser = await prisma.user.findUnique({
+			if (trigger === "update" && token.sub) {
+				const dbUser = await prisma.user.findUnique({
 					where: { id: token.sub },
-					select: { role: true, name: true, email: true },
+					select: { role: true, status: true, name: true, image: true },
 				});
-
-				if (existingUser) {
-					token.role = existingUser.role;
-					token.name = existingUser.name;
-					token.email = existingUser.email;
+				if (dbUser) {
+					token.role = dbUser.role;
+					token.status = dbUser.status;
 				}
 			}
-
 			return token;
 		},
 		async session({ session, token }) {
-			// Because of your next-auth.d.ts, this is now 100% type-safe
-			if (session.user) {
-				if (token.sub) session.user.id = token.sub;
-				if (token.role) session.user.role = token.role as UserRole;
-				if (token.email) session.user.email = token.email;
-				if (token.name) session.user.name = token.name;
+			if (token && session.user) {
+				session.user.id = token.sub as string;
+				session.user.role = token.role as UserRole;
+				session.user.status = token.status as UserStatus;
 			}
-
 			return session;
 		},
 	},

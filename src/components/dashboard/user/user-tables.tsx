@@ -151,22 +151,27 @@ export function UserActions({ user }: { user: UserWithProfile }) {
 
 	const onRoleChange = (newRole: UserRole) => {
 		startTransition(async () => {
-			const res = await updateRole(user.id, newRole);
+			// Match the schema { targetUserId, role }
+			const res = await updateRole({
+				targetUserId: user.id,
+				role: newRole,
+			});
+
 			if (res.success) toast.success(res.success);
-			else toast.error(res.error);
+			else if (res.error) toast.error(res.error);
 		});
 	};
 
 	const onDelete = () => {
 		startTransition(async () => {
-			const res = await deleteUser(user.id);
+			// Match the schema { targetUserId }
+			const res = await deleteUser({ targetUserId: user.id });
 			if (res.success) {
 				toast.success(res.success);
 				setShowDeleteDialog(false);
 			} else toast.error(res.error);
 		});
 	};
-
 	return (
 		<>
 			<DropdownMenu>

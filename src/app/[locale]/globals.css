@@ -156,3 +156,23 @@ section {
   border-radius: 0.4rem;
   font-size: 0.85em !important;
 }
+@keyframes cell-ripple {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.2;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+.animate-cell-ripple {
+  animation: cell-ripple var(--duration) ease-in-out var(--delay) forwards;
+}

@@ -1,5 +1,6 @@
 /** @format */
 
+import { UserRole } from "@prisma/client";
 import * as z from "zod";
 
 // 1. Sub-schemas for better modularity
@@ -9,7 +10,7 @@ export const SocialLinkSchema = z.object({
 	url: z.string().url("Please enter a valid URL"),
 	icon: z.string().optional().nullable(),
 });
-export const UserRoleEnum = z.enum(["ADMIN", "USER", "SUPER_ADMIN"]);
+export const UserRoleEnum = z.enum(UserRole);
 
 // 2. Main Profile Schema
 export const ProfileSchema = z.object({

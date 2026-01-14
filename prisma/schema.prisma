@@ -15,19 +15,6 @@ enum Locale {
   ar
 }
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  USER
-}
-
-enum Availability {
-  AVAILABLE
-  BUSY
-  OPEN_FOR_COMMISSION
-  ON_LEAVE
-}
-
 enum MessageStatus {
   UNREAD
   READ
@@ -50,22 +37,51 @@ enum ProjectCategory {
 // -----------------------------------------
 // 1. AUTH & IDENTITY
 // -----------------------------------------
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+  PENDING_VERIFICATION
+  DELETED
+}
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String?   @unique
   emailVerified DateTime?
+  email         String?    @unique
   password      String?
+  phone         String?
+  avatar        String?
   image         String?
-  role          UserRole  @default(USER)
+  role          UserRole   @default(USER)
+  status        UserStatus @default(ACTIVE) // Track state separately from role
 
-  accounts Account[]
-  sessions Session[]
-  profile  Profile?
+  accounts  Account[]
+  sessions  Session[]
+  profile   Profile?
+  auditLogs AuditLog[] // Link audit logs to user
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id]) // Proper relation
+  userEmail String
+  details   String   @db.Text
+  isSudo    Boolean  @default(false)
+  ipAddress String?
+  createdAt DateTime @default(now())
 }
 
 model Account {
@@ -134,10 +150,22 @@ model SocialLinks {
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
+// -----------------------------------------
+// REVISED HERO MODELS
+// -----------------------------------------
+enum Availability {
+  AVAILABLE
+  BUSY
+  OPEN_FOR_COMMISSION
+  ON_LEAVE
+  UNAVAILABLE
+  CLOSED
+  OTHER
+}
+
 model HeroSection {
   id           String            @id @default("hero-static")
   primaryImage String
-  resumeUrl    String?
   availability Availability      @default(AVAILABLE)
   isActive     Boolean           @default(true)
   translations HeroTranslation[]
@@ -145,13 +173,14 @@ model HeroSection {
 }
 
 model HeroTranslation {
-  id          String @id @default(cuid())
-  locale      Locale
-  greeting    String @default("Hi, I am")
-  name        String @default("Mohammed Yaseen")
-  role        String @default("Full-Stack Developer")
-  description String @db.Text
-  ctaText     String @default("Start a Project")
+  id          String  @id @default(cuid())
+  locale      Locale // Ensure Locale enum is defined (en, ar, etc.)
+  greeting    String  @default("Hi, I am")
+  name        String  @default("Mohammed Yaseen")
+  role        String  @default("Full-Stack Developer")
+  description String  @db.Text
+  ctaText     String  @default("Start a Project")
+  resumeUrl   String? // Correct: Localized CVs
 
   heroSectionId String
   heroSection   HeroSection @relation(fields: [heroSectionId], references: [id], onDelete: Cascade)

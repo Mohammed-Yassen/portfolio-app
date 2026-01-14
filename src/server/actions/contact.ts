@@ -3,20 +3,19 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { contactFormSchema } from "../validations/contact";
+import {
+	contactFormSchema,
+	ContactFormValues,
+	manageMessageSchema,
+} from "../validations/contact";
 import { headers } from "next/headers";
-import { ContactMessage } from "@prisma/client";
 
-export type MessageAction =
-	| "ARCHIVE"
-	| "DELETE"
-	| "TOGGLE_STAR"
-	| "REPLIED"
-	| "TOGGLE_READ"
-	| "SPAM";
+import { createSecureAction } from "@/lib/safe-action";
 
 /**
- * Handle public contact form submissions
+ * PUBLIC: Anyone can send a message.
+ * We pass 'null' or omit accessLevel in the wrapper if your utility supports public actions,
+ * otherwise, we use it for validation only.
  */
 export async function sendContactMessage(values: unknown) {
 	const validatedFields = contactFormSchema.safeParse(values);
@@ -27,12 +26,15 @@ export async function sendContactMessage(values: unknown) {
 
 	try {
 		const headerList = await headers();
+
 		const ip = headerList.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
 		await prisma.contactMessage.create({
 			data: {
 				...validatedFields.data,
+
 				ipAddress: ip,
+
 				status: "UNREAD",
 			},
 		});
@@ -40,87 +42,82 @@ export async function sendContactMessage(values: unknown) {
 		return { success: true };
 	} catch (error) {
 		console.error("Contact Action Error:", error);
+
 		return { error: "Failed to send message." };
-	}
-}
-
-/**
- * Manage existing messages with toggle logic for ARCHIVE and SPAM
- */
-export async function manageMessage(id: string, action: MessageAction) {
-	try {
-		const message = await prisma.contactMessage.findUnique({ where: { id } });
-		if (!message) return { success: false, error: "Message not found" };
-
-		// 1. Handle Immediate Deletion
-		if (action === "DELETE") {
-			await prisma.contactMessage.delete({ where: { id } });
-			revalidatePath("/admin/messages");
-			return { success: true };
-		}
-
-		// 2. Determine Update Data based on Action
-		let updateData: Partial<ContactMessage> = {};
-
-		switch (action) {
-			case "ARCHIVE":
-				// Toggle: If ARCHIVED, move to READ. Otherwise, move to ARCHIVED.
-				updateData = {
-					status: message.status === "ARCHIVED" ? "READ" : "ARCHIVED",
-				};
-				break;
-
-			case "SPAM":
-				// Toggle: If SPAM, move to UNREAD. Otherwise, move to SPAM.
-				updateData = {
-					status: message.status === "SPAM" ? "UNREAD" : "SPAM",
-				};
-				break;
-
-			case "TOGGLE_STAR":
-				updateData = { priority: !message.priority };
-				break;
-
-			case "TOGGLE_READ":
-				updateData = {
-					status: message.status === "UNREAD" ? "READ" : "UNREAD",
-				};
-				break;
-
-			case "REPLIED":
-				updateData = { status: "REPLIED" };
-				break;
-
-			default:
-				return { success: false, error: "Invalid action" };
-		}
-
-		const updated = await prisma.contactMessage.update({
-			where: { id },
-			data: updateData,
-		});
-
-		revalidatePath("/admin/messages");
-		return { success: true, data: updated };
-	} catch (error) {
-		console.error("Management Error:", error);
-		return { success: false, error: "Database operation failed" };
 	}
 }
 /** @format */
 
-// export async function deleteMessage(id: string) {
-// 	try {
-// 		await prisma.contactMessage.delete({
-// 			where: { id },
-// 		});
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
-// 		// Clear the cache for the inbox so the message disappears immediately
-// 		revalidatePath("/admin/messages");
+/**
+ * Valid actions allowed by the UI
+ */
 
-// 		return { success: true };
-// 	} catch (error) {
-// 		console.error("Delete Error:", error);
-// 		return { success: false, error: "Failed to delete message." };
-// 	}
-// }
+export type MessageAction = z.infer<typeof manageMessageSchema>["action"];
+
+/**
+ * Manages contact message states with administrative authorization
+ */
+export async function manageMessage(id: string, action: MessageAction) {
+	// We wrap the arguments into an object to match the Zod schema
+	return createSecureAction(
+		{ id, action },
+		{
+			schema: manageMessageSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const { id, action } = data;
+
+			// 1. Fetch current state to handle toggles
+			const message = await prisma.contactMessage.findUnique({
+				where: { id },
+				select: { id: true, status: true, priority: true },
+			});
+
+			if (!message) throw new Error("Message not found");
+
+			// 2. Handle immediate deletion
+			if (action === "DELETE") {
+				await prisma.contactMessage.delete({ where: { id } });
+				revalidatePath("/admin/messages");
+				return { success: true };
+			}
+
+			// 3. Prepare Update Payload (Type-safe for Prisma)
+			const updateData: Prisma.ContactMessageUpdateInput = {};
+
+			switch (action) {
+				case "ARCHIVE":
+					updateData.status =
+						message.status === "ARCHIVED" ? "READ" : "ARCHIVED";
+					break;
+				case "SPAM":
+					updateData.status = message.status === "SPAM" ? "UNREAD" : "SPAM";
+					break;
+				case "TOGGLE_READ":
+					updateData.status = message.status === "UNREAD" ? "READ" : "UNREAD";
+					break;
+				case "TOGGLE_STAR":
+					updateData.priority = !message.priority;
+					break;
+				case "REPLIED":
+					updateData.status = "REPLIED";
+					break;
+			}
+
+			// 4. Execute Update
+			const updated = await prisma.contactMessage.update({
+				where: { id },
+				data: updateData,
+			});
+
+			// 5. Sync Cache
+			revalidatePath("/admin/messages");
+
+			return { success: true, data: updated };
+		},
+	);
+}

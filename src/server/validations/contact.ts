@@ -30,7 +30,21 @@ export const contactQuerySchema = z.object({
 	status: z.enum(["UNREAD", "READ", "REPLIED", "ARCHIVED", "SPAM"]).optional(),
 	priority: z.boolean().optional(),
 });
+// src/server/validations/contact.ts
 
+export const manageMessageSchema = z.object({
+	id: z.string().min(1),
+	action: z.enum([
+		"ARCHIVE",
+		"DELETE",
+		"TOGGLE_STAR",
+		"REPLIED",
+		"TOGGLE_READ",
+		"SPAM",
+	]),
+});
+
+export type MessageAction = z.infer<typeof manageMessageSchema>["action"];
 export type ContactFormValues = z.infer<typeof contactFormSchema>;
 export type ContactMessageValues = z.infer<typeof contactMessageSchema>;
 export type ContactQuery = z.infer<typeof contactQuerySchema>;

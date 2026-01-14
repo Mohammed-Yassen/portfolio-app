@@ -7,7 +7,9 @@ import { Locale } from "@prisma/client";
 import {
 	AboutLoader,
 	BlogLoader,
+	CertificationLoader,
 	ExperienceLoader,
+	FooterLoader,
 	HeroLoader,
 	ProjectLoader,
 	SkillsLoader,
@@ -22,6 +24,7 @@ import {
 	ProjectsSkeleton,
 	BlogSkeleton,
 	TestimonialsSkeleton,
+	CertificationsSkeleton,
 } from "@/components/sections/sections-skeleton";
 import { HomeClientWrapper } from "./home-client-wrapper";
 import { FloatingDock } from "@/components/floating-nav";
@@ -29,6 +32,7 @@ import { HomeHeader } from "@/components/buttons-header";
 import { notFound } from "next/navigation";
 import { Footer } from "@/components/sections/footer";
 import { ContactSectionForm } from "@/components/sections/contact-section";
+import { ServicesSection } from "@/components/sections/services-section";
 
 const DEFAULT_UI_CONFIG = {
 	navActive: true,
@@ -74,60 +78,63 @@ export default async function Home({ params }: HomeProps) {
 
 				<HomeHeader user={session?.user} />
 
-				<main className='flex flex-col w-full overflow-x-hidden'>
-					{ui.heroActive && (
-						<Suspense fallback={<HeroSkeleton />}>
-							<HeroLoader locale={locale} />
-						</Suspense>
-					)}
+				{ui.heroActive && (
+					<Suspense fallback={<HeroSkeleton />}>
+						<HeroLoader locale={locale} />
+					</Suspense>
+				)}
 
-					{ui.aboutActive && (
-						<Suspense fallback={<AboutSkeleton />}>
-							<AboutLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.testimonialActive && (
-						<Suspense fallback={<TestimonialsSkeleton />}>
-							<TestimonialsLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.skillActive && (
-						<Suspense fallback={<SkillsSkeleton />}>
-							<SkillsLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.experienceActive && (
-						<Suspense fallback={<ExperienceSkeleton />}>
-							<ExperienceLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.projectActive && (
-						<Suspense fallback={<ProjectsSkeleton />}>
-							<ProjectLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.blogActive && (
-						<Suspense fallback={<BlogSkeleton />}>
-							<BlogLoader locale={locale} />
-						</Suspense>
-					)}
-					{ui.contactActive && (
-						<Suspense fallback={<BlogSkeleton />}>
-							<ContactSectionForm />
-						</Suspense>
-					)}
+				{ui.aboutActive && (
+					<Suspense fallback={<AboutSkeleton />}>
+						<AboutLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.testimonialActive && (
+					<Suspense fallback={<TestimonialsSkeleton />}>
+						<TestimonialsLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.skillActive && (
+					<Suspense fallback={<SkillsSkeleton />}>
+						<SkillsLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.experienceActive && (
+					<Suspense fallback={<ExperienceSkeleton />}>
+						<ExperienceLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.certificationActive && (
+					<Suspense fallback={<CertificationsSkeleton />}>
+						<CertificationLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.projectActive && (
+					<Suspense fallback={<ProjectsSkeleton />}>
+						<ProjectLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.blogActive && (
+					<Suspense fallback={<BlogSkeleton />}>
+						<BlogLoader locale={locale} />
+					</Suspense>
+				)}
+				{ui.contactActive && (
+					<Suspense fallback={<BlogSkeleton />}>
+						<ContactSectionForm />
+					</Suspense>
+				)}
+				{ui.contactActive && (
+					<Suspense fallback={<BlogSkeleton />}>
+						<ServicesSection />
+					</Suspense>
+				)}
 
-					{ui.footerActive && (
-						<Suspense fallback={<FooterSkeleton />}>
-							<Footer />
-							<footer className='py-10 text-center border-t border-border/40'>
-								<p className='text-muted-foreground text-sm'>
-									© 2026 Portfolio
-								</p>
-							</footer>
-						</Suspense>
-					)}
-				</main>
+				{ui.footerActive && (
+					<Suspense fallback={<FooterSkeleton />}>
+						<FooterLoader locale={locale} />
+					</Suspense>
+				)}
 			</div>
 		</HomeClientWrapper>
 	);

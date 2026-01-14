@@ -81,7 +81,7 @@ export const ServicesSection = () => {
 						Available <span className='text-primary'>Services</span>
 					</h2>
 					<p className='text-muted-foreground max-w-2xl mx-auto text-lg'>
-						Choose a service package tailored to your project's complexity.
+						Choose a service package tailored to your project s complexity.
 					</p>
 				</motion.div>
 

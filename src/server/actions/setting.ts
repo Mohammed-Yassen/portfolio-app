@@ -3,727 +3,565 @@
 
 import prisma from "@/lib/prisma";
 import {
+	AboutFormValues,
+	CertificationFormValue,
 	HeroFormValues,
 	heroSchema,
 	sectionActiveSchema,
 	SectionActiveValues,
 	SkillCategoryFormValue,
 	skillCategorySchema,
+	experienceSchema,
+	ExperienceFormValue,
+	educationSchema,
+	EducationFormValue,
+	certificationSchema,
 } from "@/server/validations";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { z } from "zod";
+import { createSecureAction } from "@/lib/safe-action";
+import { aboutSchema } from "@/server/validations";
+
+const ABOUT_ID = "about-static";
+
+// Use a constant for singleton records to avoid multiple hero sections
+const HERO_ID = "hero-static"; // Matches your @default("hero-static") in Prisma
 
 export async function updateHeroAction(values: HeroFormValues) {
-	// 1. Server-side validation
-	const validatedFields = heroSchema.safeParse(values);
-	if (!validatedFields.success) {
-		return { success: false, error: "Invalid input fields." };
-	}
+	return createSecureAction(
+		values,
+		{
+			schema: heroSchema, // Assuming heroSchema includes locale, primaryImage, etc.
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data, ctx) => {
+			const {
+				locale,
+				primaryImage,
+				availability,
+				isActive,
+				resumeUrl,
+				id,
+				...translations
+			} = data;
 
-	const data = validatedFields.data;
-	const locale = data.locale;
-
-	// Translation fields to avoid repetition
-	const translationData = {
-		greeting: data.greeting,
-		name: data.name,
-		role: data.role,
-		description: data.description,
-		ctaText: data.ctaText,
-	};
-
-	try {
-		// 2. Check for the single Hero record
-		const existingHero = await prisma.heroSection.findFirst();
-
-		let result;
-
-		if (existingHero) {
-			// UPDATE: Existing Hero + Upsert Translation for the current locale
-			result = await prisma.heroSection.update({
-				where: { id: existingHero.id },
-				data: {
-					primaryImage: data.primaryImage,
-					availability: data.availability,
-					isActive: data.isActive,
-					translations: {
-						upsert: {
-							where: {
-								heroSectionId_locale: {
-									heroSectionId: existingHero.id,
-									locale: locale,
-								},
-							},
-							create: { locale, ...translationData },
-							update: { ...translationData },
-						},
-					},
-				},
-			});
-		} else {
-			// CREATE: First time setup
-			result = await prisma.heroSection.create({
-				data: {
-					primaryImage: data.primaryImage,
-					availability: data.availability,
-					isActive: data.isActive,
-					translations: {
-						create: {
-							locale,
-							...translationData,
-						},
-					},
-				},
-			});
-		}
-
-		// 3. Clear cache so the site updates immediately
-		revalidatePath("/[locale]/admin/setting", "page");
-		revalidatePath("/[locale]", "layout");
-
-		return { success: true, data: result };
-	} catch (error) {
-		console.error("HERO_UPDATE_ERROR:", error);
-
-		// Handle specific Prisma unique constraint errors
-		if (error === "P2002") {
-			return {
-				success: false,
-				error: "A unique constraint failed. This locale might already exist.",
+			// Prepare the payload for both Create and Update
+			const translationData = {
+				...translations,
+				resumeUrl: resumeUrl || undefined,
+				locale,
 			};
-		}
 
-		return { success: false, error: "Something went wrong while saving." };
-	}
+			// Atomic Upsert: Handles the root record and the specific locale translation together
+			return await prisma.heroSection
+				.upsert({
+					where: { id: HERO_ID },
+					create: {
+						id: HERO_ID,
+						primaryImage,
+						availability,
+						isActive, // Ensure isActive is passed here
+						translations: {
+							create: [translationData],
+						},
+					},
+					update: {
+						primaryImage,
+						availability,
+						isActive, // Ensure isActive is passed here
+						translations: {
+							upsert: {
+								where: {
+									heroSectionId_locale: {
+										heroSectionId: HERO_ID,
+										locale,
+									},
+								},
+								create: translationData,
+								update: translationData,
+							}, // Ensure translationData is correctly passed
+						},
+					},
+				})
+				.finally(() => {
+					revalidatePath("/", "layout"); // Global revalidate
+					revalidatePath(`/${locale}`, "layout");
+				});
+		},
+	);
 }
 
 export async function deleteHeroAction(id: string) {
-	try {
-		// Check existence before delete to avoid prisma crash
-		const hero = await prisma.heroSection.findUnique({ where: { id } });
-		if (!hero) return { success: false, error: "Hero section not found" };
+	return createSecureAction(
+		{ id },
+		{
+			schema: z.object({ id: z.string() }),
+			accessLevel: ["OWNER", "SUPER_ADMIN"], // Higher protection for deletion
+		},
+		async (data) => {
+			// deleteMany is safer than delete because it doesn't throw if record is already gone
+			const result = await prisma.heroSection.deleteMany({
+				where: { id: data.id },
+			});
 
-		await prisma.heroSection.delete({ where: { id } });
-
-		revalidatePath("/[locale]", "layout");
-		return { success: true };
-	} catch (error) {
-		console.error("DELETE_HERO_ERROR:", error);
-		return { success: false, error: "Failed to delete hero section" };
-	}
-}
-//
-
-import { AboutFormValues, aboutSchema } from "@/server/validations";
-
-export async function updateAboutAction(values: AboutFormValues) {
-	const validatedFields = aboutSchema.safeParse(values);
-	if (!validatedFields.success) {
-		return { success: false, error: "Invalid input fields." };
-	}
-
-	const { locale, title, subtitle, description, corePillars, statuses } =
-		validatedFields.data;
-
-	try {
-		await prisma.$transaction(
-			async (tx) => {
-				// 1. Core Section
-				await tx.aboutSection.upsert({
-					where: { id: "about-static" },
-					update: {},
-					create: { id: "about-static" },
-				});
-
-				// 2. Main Translation
-				await tx.aboutTranslation.upsert({
-					where: {
-						aboutSectionId_locale: { aboutSectionId: "about-static", locale },
-					},
-					create: {
-						aboutSectionId: "about-static",
-						locale,
-						title,
-						subtitle,
-						description,
-					},
-					update: { title, subtitle, description },
-				});
-
-				// 3. Handle Statuses
-				const currentStatuses = await tx.aboutStatus.findMany({
-					where: { aboutSectionId: "about-static" },
-					select: { id: true },
-				});
-
-				const incomingStatusIds = statuses
-					.map((s) => s.id)
-					.filter(Boolean) as string[];
-				const statusesToDelete = currentStatuses.filter(
-					(s) => !incomingStatusIds.includes(s.id),
-				);
-
-				if (statusesToDelete.length > 0) {
-					await tx.aboutStatus.deleteMany({
-						where: { id: { in: statusesToDelete.map((s) => s.id) } },
-					});
-				}
-
-				for (const status of statuses) {
-					const statusUpdate = await tx.aboutStatus.upsert({
-						where: { id: status.id || "temp-new-id" },
-						create: {
-							aboutSectionId: "about-static",
-							icon: status.icon,
-							isActive: status.isActive,
-						},
-						update: { icon: status.icon, isActive: status.isActive },
-					});
-
-					await tx.statusTranslation.upsert({
-						where: { statusId_locale: { statusId: statusUpdate.id, locale } },
-						create: {
-							statusId: statusUpdate.id,
-							locale,
-							label: status.label,
-							value: status.value,
-						},
-						update: { label: status.label, value: status.value },
-					});
-				}
-
-				// 4. Handle Pillars
-				const currentPillars = await tx.corePillar.findMany({
-					where: { aboutSectionId: "about-static" },
-					select: { id: true },
-				});
-
-				const incomingPillarIds = corePillars
-					.map((p) => p.id)
-					.filter(Boolean) as string[];
-				const pillarsToDelete = currentPillars.filter(
-					(p) => !incomingPillarIds.includes(p.id),
-				);
-
-				if (pillarsToDelete.length > 0) {
-					await tx.corePillar.deleteMany({
-						where: { id: { in: pillarsToDelete.map((p) => p.id) } },
-					});
-				}
-
-				for (const pillar of corePillars) {
-					const pillarUpdate = await tx.corePillar.upsert({
-						where: { id: pillar.id || "temp-new-id" },
-						create: {
-							aboutSectionId: "about-static",
-							icon: pillar.icon,
-						},
-						update: { icon: pillar.icon },
-					});
-
-					await tx.pillarTranslation.upsert({
-						where: { pillarId_locale: { pillarId: pillarUpdate.id, locale } },
-						create: {
-							pillarId: pillarUpdate.id,
-							locale,
-							title: pillar.title,
-							description: pillar.description,
-						},
-						update: { title: pillar.title, description: pillar.description },
-					});
-				}
-			},
-			{ timeout: 20000 },
-		);
-
-		// FIX: Provided two arguments based on your local TypeScript alias
-		// Usually 'default' or the specific profile used in your 'use cache' configuration
-		revalidateTag("about", "default");
-		revalidatePath("/", "layout");
-
-		return { success: true };
-	} catch (error) {
-		console.error("Update Action Error:", error);
-		return {
-			success: false,
-			error: "Failed to save data. Please try again.",
-		};
-	}
-}
-
-export async function upsertSkillCategoryAction(data: SkillCategoryFormValue) {
-	// 1. Server-side validation
-	const validatedFields = skillCategorySchema.safeParse(data);
-	if (!validatedFields.success)
-		return { success: false, error: "Invalid data" };
-
-	const { id, title, icon, order, isActive, locale, skills } =
-		validatedFields.data;
-
-	try {
-		const result = await prisma.$transaction(async (tx) => {
-			// If editing, handle cleanup of nested translations/skills for this specific locale
-			if (id) {
-				// Remove existing translations for this locale to avoid unique constraint conflicts
-				await tx.skillCategoryTranslation.deleteMany({
-					where: { categoryId: id, locale },
-				});
-
-				// Optional: If you want to replace ALL skills every time you save:
-				const currentSkills = await tx.skill.findMany({
-					where: { categoryId: id },
-					select: { id: true },
-				});
-				const skillIds = currentSkills.map((s) => s.id);
-
-				await tx.skillTranslation.deleteMany({
-					where: { skillId: { in: skillIds } },
-				});
-				await tx.skill.deleteMany({ where: { categoryId: id } });
+			if (result.count > 0) {
+				revalidatePath("/", "layout");
 			}
 
-			// 2. Perform the Upsert
-			return await tx.skillCategory.upsert({
-				where: { id: id || "new-record" },
-				update: {
-					icon,
-					order,
-					isActive,
-					translations: {
-						create: { locale, title },
-					},
-					skills: {
-						create: skills.map((s) => ({
-							level: s.level,
-							icon: s.icon,
-							translations: {
-								create: { locale, name: s.name },
-							},
-						})),
-					},
-				},
-				create: {
-					icon,
-					order,
-					isActive,
-					translations: {
-						create: { locale, title },
-					},
-					skills: {
-						create: skills.map((s) => ({
-							level: s.level,
-							icon: s.icon,
-							translations: {
-								create: { locale, name: s.name },
-							},
-						})),
-					},
-				},
-			});
-		});
+			return { deletedCount: result.count };
+		},
+	);
+}
 
-		revalidatePath("/", "layout");
-		return { success: true, id: result.id };
-	} catch (error) {
-		console.error("UPSERT_SKILL_ERROR:", error);
-		return { success: false, error: "Database operation failed" };
-	}
+export async function updateAboutAction(values: AboutFormValues) {
+	return createSecureAction(
+		values,
+		{
+			schema: aboutSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const { locale, title, subtitle, description, corePillars, statuses } =
+				data;
+
+			await prisma.$transaction(
+				async (tx) => {
+					// 1. Core Section
+					await tx.aboutSection.upsert({
+						where: { id: ABOUT_ID },
+						update: {},
+						create: { id: ABOUT_ID },
+					});
+
+					// 2. Main Translation
+					await tx.aboutTranslation.upsert({
+						where: {
+							aboutSectionId_locale: { aboutSectionId: ABOUT_ID, locale },
+						},
+						create: {
+							aboutSectionId: ABOUT_ID,
+							locale,
+							title,
+							subtitle,
+							description,
+						},
+						update: { title, subtitle, description },
+					});
+
+					// 3. Statuses Sync (Delete removed, Upsert remaining)
+					const incomingStatusIds = statuses
+						.map((s) => s.id)
+						.filter(Boolean) as string[];
+					await tx.aboutStatus.deleteMany({
+						where: {
+							aboutSectionId: ABOUT_ID,
+							id: { notIn: incomingStatusIds },
+						},
+					});
+
+					for (const status of statuses) {
+						const updatedStatus = await tx.aboutStatus.upsert({
+							where: { id: status.id || "new-status" },
+							create: {
+								aboutSectionId: ABOUT_ID,
+								icon: status.icon,
+								isActive: status.isActive,
+							},
+							update: { icon: status.icon, isActive: status.isActive },
+						});
+
+						await tx.statusTranslation.upsert({
+							where: {
+								statusId_locale: { statusId: updatedStatus.id, locale },
+							},
+							create: {
+								statusId: updatedStatus.id,
+								locale,
+								label: status.label,
+								value: status.value,
+							},
+							update: { label: status.label, value: status.value },
+						});
+					}
+
+					// 4. Pillars Sync
+					const incomingPillarIds = corePillars
+						.map((p) => p.id)
+						.filter(Boolean) as string[];
+					await tx.corePillar.deleteMany({
+						where: {
+							aboutSectionId: ABOUT_ID,
+							id: { notIn: incomingPillarIds },
+						},
+					});
+
+					for (const pillar of corePillars) {
+						const updatedPillar = await tx.corePillar.upsert({
+							where: { id: pillar.id || "new-pillar" },
+							create: { aboutSectionId: ABOUT_ID, icon: pillar.icon },
+							update: { icon: pillar.icon },
+						});
+
+						await tx.pillarTranslation.upsert({
+							where: {
+								pillarId_locale: { pillarId: updatedPillar.id, locale },
+							},
+							create: {
+								pillarId: updatedPillar.id,
+								locale,
+								title: pillar.title,
+								description: pillar.description,
+							},
+							update: { title: pillar.title, description: pillar.description },
+						});
+					}
+				},
+				{ timeout: 20000 },
+			);
+
+			revalidateTag("about", "default");
+			revalidatePath("/", "layout");
+			return { success: true };
+		},
+	);
+}
+
+export async function upsertSkillCategoryAction(
+	values: SkillCategoryFormValue,
+) {
+	return createSecureAction(
+		values,
+		{
+			schema: skillCategorySchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const { id, title, icon, order, isActive, locale, skills } = data;
+
+			const result = await prisma.$transaction(async (tx) => {
+				if (id) {
+					// Cleanup current locale translations and children
+					await tx.skillCategoryTranslation.deleteMany({
+						where: { categoryId: id, locale },
+					});
+					const currentSkills = await tx.skill.findMany({
+						where: { categoryId: id },
+						select: { id: true },
+					});
+					const skillIds = currentSkills.map((s) => s.id);
+					await tx.skillTranslation.deleteMany({
+						where: { skillId: { in: skillIds }, locale },
+					});
+					await tx.skill.deleteMany({ where: { categoryId: id } });
+				}
+
+				return await tx.skillCategory.upsert({
+					where: { id: id || "new-skill-cat" },
+					update: {
+						icon,
+						order,
+						isActive,
+						translations: { create: { locale, title } },
+						skills: {
+							create: skills.map((s) => ({
+								level: s.level,
+								icon: s.icon,
+								translations: { create: { locale, name: s.name } },
+							})),
+						},
+					},
+					create: {
+						icon,
+						order,
+						isActive,
+						translations: { create: { locale, title } },
+						skills: {
+							create: skills.map((s) => ({
+								level: s.level,
+								icon: s.icon,
+								translations: { create: { locale, name: s.name } },
+							})),
+						},
+					},
+				});
+			});
+
+			revalidatePath("/", "layout");
+			return { id: result.id };
+		},
+	);
 }
 
 export async function deleteSkillCategoryAction(id: string) {
-	if (!id) return { success: false, error: "ID is required" };
-
-	try {
-		await prisma.$transaction(async (tx) => {
-			// 1. Find all skills in this category
-			const skills = await tx.skill.findMany({
-				where: { categoryId: id },
-				select: { id: true },
-			});
-			const skillIds = skills.map((s) => s.id);
-
-			// 2. Cleanup all translations first (Manual cascade)
-			await tx.skillTranslation.deleteMany({
-				where: { skillId: { in: skillIds } },
-			});
-			await tx.skill.deleteMany({ where: { categoryId: id } });
-			await tx.skillCategoryTranslation.deleteMany({
-				where: { categoryId: id },
-			});
-
-			// 3. Final delete
-			await tx.skillCategory.delete({ where: { id } });
-		});
-
-		revalidatePath("/", "layout");
-		return { success: true, message: "Category deleted successfully" };
-	} catch (error) {
-		console.error("DELETE_SKILL_CATEGORY_ERROR:", error);
-		return { success: false, error: "Failed to delete category" };
-	}
-}
-
-// /** @format */
-
-import { experienceSchema, ExperienceFormValue } from "@/server/validations";
-
-export async function upsertExperienceAction(data: ExperienceFormValue) {
-	// 1. Server-side validation
-	const validatedFields = experienceSchema.safeParse(data);
-	if (!validatedFields.success)
-		return { success: false, error: "Invalid data" };
-
-	const {
-		id,
-		companyName,
-		companyLogo,
-		companyWebsite,
-		location,
-		startDate,
-		endDate,
-		isCurrent,
-		locale,
-		role,
-		employmentType,
-		description,
-		techniques,
-	} = validatedFields.data;
-
-	try {
-		const result = await prisma.$transaction(async (tx) => {
-			// Cleanup nested relations for this specific record/locale if editing
-			if (id) {
-				// Delete existing experience translations for this locale
-				await tx.experienceTranslation.deleteMany({
-					where: { experienceId: id, locale },
-				});
-
-				// Find and cleanup techniques
-				const currentTechs = await tx.technique.findMany({
-					where: { experienceId: id },
+	return createSecureAction(
+		{ id },
+		{
+			schema: z.object({ id: z.string().min(1) }),
+			accessLevel: ["SUPER_ADMIN", "OWNER"], // Deletion restricted to higher tiers
+		},
+		async (data) => {
+			await prisma.$transaction(async (tx) => {
+				const skills = await tx.skill.findMany({
+					where: { categoryId: data.id },
 					select: { id: true },
 				});
-				const techIds = currentTechs.map((t) => t.id);
+				const skillIds = skills.map((s) => s.id);
 
-				// Remove technique translations for this locale
-				await tx.techniqueTranslation.deleteMany({
-					where: { techniqueId: { in: techIds }, locale },
+				// Manual Cascade (if not set in Prisma Schema)
+				await tx.skillTranslation.deleteMany({
+					where: { skillId: { in: skillIds } },
 				});
-
-				// Remove techniques to prevent duplicates (recreated below)
-				await tx.technique.deleteMany({ where: { experienceId: id } });
-			}
-
-			// 2. Perform the Upsert
-			const experienceData = {
-				companyName,
-				companyLogo,
-				companyWebsite,
-				location,
-				startDate: new Date(startDate),
-				endDate: isCurrent ? null : endDate ? new Date(endDate) : null,
-				isCurrent,
-				translations: {
-					create: { locale, role, employmentType, description },
-				},
-				techniques: {
-					create: techniques.map((t) => ({
-						icon: t.icon,
-						translations: {
-							create: { locale, name: t.name },
-						},
-					})),
-				},
-			};
-
-			return await tx.experience.upsert({
-				where: { id: id || "new-record" },
-				update: experienceData,
-				create: experienceData,
+				await tx.skill.deleteMany({ where: { categoryId: data.id } });
+				await tx.skillCategoryTranslation.deleteMany({
+					where: { categoryId: data.id },
+				});
+				await tx.skillCategory.delete({ where: { id: data.id } });
 			});
-		});
 
-		revalidatePath("/", "layout");
-		return { success: true, id: result.id };
-	} catch (error) {
-		console.error("UPSERT_EXPERIENCE_ERROR:", error);
-		return { success: false, error: "Database operation failed" };
-	}
+			revalidatePath("/", "layout");
+			return { success: true };
+		},
+	);
+}
+// /** @format */
+
+export async function upsertExperienceAction(values: ExperienceFormValue) {
+	return createSecureAction(
+		values,
+		{
+			schema: experienceSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const {
+				id,
+				locale,
+				role,
+				employmentType,
+				description,
+				techniques,
+				...root
+			} = data;
+
+			const result = await prisma.$transaction(async (tx) => {
+				// 1. Precise Cleanup for the specific locale if editing
+				if (id) {
+					await tx.experienceTranslation.deleteMany({
+						where: { experienceId: id, locale },
+					});
+
+					const currentTechs = await tx.technique.findMany({
+						where: { experienceId: id },
+						select: { id: true },
+					});
+					const techIds = currentTechs.map((t) => t.id);
+
+					await tx.techniqueTranslation.deleteMany({
+						where: { techniqueId: { in: techIds }, locale },
+					});
+					await tx.technique.deleteMany({ where: { experienceId: id } });
+				}
+
+				// 2. Structured Payload
+				const experiencePayload = {
+					...root,
+					startDate: new Date(root.startDate),
+					endDate: root.isCurrent
+						? null
+						: root.endDate
+						? new Date(root.endDate)
+						: null,
+					translations: {
+						create: { locale, role, employmentType, description },
+					},
+					techniques: {
+						create: techniques.map((t) => ({
+							icon: t.icon,
+							translations: { create: { locale, name: t.name } },
+						})),
+					},
+				};
+
+				return await tx.experience.upsert({
+					where: { id: id || "new-experience" },
+					update: experiencePayload,
+					create: experiencePayload,
+				});
+			});
+
+			revalidatePath("/", "layout");
+			return { id: result.id };
+		},
+	);
 }
 
 export async function deleteExperienceAction(id: string) {
-	if (!id) return { success: false, error: "ID is required" };
-
-	try {
-		await prisma.$transaction(async (tx) => {
-			// 1. Find all techniques to clean their translations
-			const techniques = await tx.technique.findMany({
-				where: { experienceId: id },
-				select: { id: true },
-			});
-			const techIds = techniques.map((t) => t.id);
-
-			// 2. Manual cleanup of translations (Manual Cascade)
-			await tx.techniqueTranslation.deleteMany({
-				where: { techniqueId: { in: techIds } },
-			});
-
-			await tx.technique.deleteMany({
-				where: { experienceId: id },
-			});
-
-			await tx.experienceTranslation.deleteMany({
-				where: { experienceId: id },
-			});
-
-			// 3. Final delete of parent
-			await tx.experience.delete({ where: { id } });
-		});
-
-		revalidatePath("/", "layout");
-		return { success: true, message: "Experience deleted successfully" };
-	} catch (error) {
-		console.error("DELETE_EXPERIENCE_ERROR:", error);
-		return { success: false, error: "Failed to delete experience" };
-	}
-}
-
-/** @format */
-
-import { educationSchema, EducationFormValue } from "@/server/validations";
-import { auth } from "@/auth";
-
-export async function upsertEducationAction(data: EducationFormValue) {
-	// 1. Server-side validation
-	const validatedFields = educationSchema.safeParse(data);
-	if (!validatedFields.success)
-		return { success: false, error: "Invalid data" };
-
-	const {
-		id,
-		schoolName,
-		schoolLogo,
-		schoolWebsite,
-		location,
-		startDate,
-		endDate,
-		isCurrent,
-		locale,
-		degree,
-		fieldOfStudy,
-		description,
-		techniques,
-	} = validatedFields.data;
-
-	try {
-		const result = await prisma.$transaction(async (tx) => {
-			// 2. Manual Cleanup for existing records
-			if (id) {
-				// Delete existing education translations for this specific locale
-				await tx.educationTranslation.deleteMany({
-					where: { educationId: id, locale },
-				});
-
-				// Find techniques associated with this education to clean their translations
-				const currentTechs = await tx.technique.findMany({
-					where: { educationId: id },
+	return createSecureAction(
+		{ id },
+		{
+			schema: z.object({ id: z.string().min(1) }),
+			accessLevel: ["SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			await prisma.$transaction(async (tx) => {
+				const techniques = await tx.technique.findMany({
+					where: { experienceId: data.id },
 					select: { id: true },
 				});
-				const techIds = currentTechs.map((t) => t.id);
+				const techIds = techniques.map((t) => t.id);
 
 				await tx.techniqueTranslation.deleteMany({
-					where: { techniqueId: { in: techIds }, locale },
+					where: { techniqueId: { in: techIds } },
 				});
-
-				// Remove the techniques (they will be recreated in the upsert)
-				await tx.technique.deleteMany({ where: { educationId: id } });
-			}
-
-			// 3. Prepare Data Structures
-			// Flat fields go to the main Education table
-			const baseFields = {
-				schoolName,
-				schoolLogo,
-				schoolWebsite,
-				location,
-				startDate: new Date(startDate),
-				endDate: isCurrent ? null : endDate ? new Date(endDate) : null,
-				isCurrent,
-			};
-
-			// Relational fields handle the nested translations and techniques
-			const relationFields = {
-				translations: {
-					create: {
-						locale,
-						degree,
-						fieldOfStudy,
-						description,
-					},
-				},
-				techniques: {
-					create: techniques.map((t) => ({
-						icon: t.icon,
-						translations: {
-							create: { locale, name: t.name },
-						},
-					})),
-				},
-			};
-
-			// 4. The Upsert
-			// We pass the same combined object to both 'update' and 'create'
-			const finalData = { ...baseFields, ...relationFields };
-
-			return await tx.education.upsert({
-				where: { id: id || "new-record" },
-				update: finalData as never,
-				create: finalData as never,
+				await tx.technique.deleteMany({ where: { experienceId: data.id } });
+				await tx.experienceTranslation.deleteMany({
+					where: { experienceId: data.id },
+				});
+				await tx.experience.delete({ where: { id: data.id } });
 			});
-		});
 
-		revalidatePath("/", "layout");
-		return { success: true, id: result.id };
-	} catch (error) {
-		console.error("UPSERT_EDUCATION_ERROR:", error);
-		return {
-			success: false,
-			error: "Database operation failed. Ensure schema is synced.",
-		};
-	}
+			revalidatePath("/", "layout");
+			return { success: true };
+		},
+	);
 }
-export async function deleteEducationAction(id: string) {
-	if (!id) return { success: false, error: "ID is required" };
-
-	try {
-		await prisma.$transaction(async (tx) => {
-			// 1. Target all techniques learned in this education
-			const techniques = await tx.technique.findMany({
-				where: { educationId: id },
-				select: { id: true },
-			});
-			const techIds = techniques.map((t) => t.id);
-
-			// 2. Clear Technique Translations
-			await tx.techniqueTranslation.deleteMany({
-				where: { techniqueId: { in: techIds } },
-			});
-
-			// 3. Clear Techniques themselves
-			await tx.technique.deleteMany({
-				where: { educationId: id },
-			});
-
-			// 4. Clear Education Translations
-			await tx.educationTranslation.deleteMany({
-				where: { educationId: id },
-			});
-
-			// 5. Delete the Parent Record
-			await tx.education.delete({ where: { id } });
-		});
-
-		revalidatePath("/", "layout");
-		return { success: true, message: "Education deleted successfully" };
-	} catch (error) {
-		console.error("DELETE_EDUCATION_ERROR:", error);
-		return { success: false, error: "Failed to delete education record" };
-	}
-}
-
 /** @format */
 
-export async function updateSectionStatus(values: SectionActiveValues) {
-	try {
-		// 1. Authorization Guard
-		const session = await auth();
-		const isAdmin = true;
-		// session?.user?.role === "ADMIN" ||
-		// session?.user?.email === process.env.ADMIN_EMAIL;
-		if (!isAdmin) return { error: "UNAUTHORIZED_ACCESS" };
+export async function upsertEducationAction(values: EducationFormValue) {
+	return createSecureAction(
+		values,
+		{
+			schema: educationSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const {
+				id,
+				locale,
+				degree,
+				fieldOfStudy,
+				description,
+				techniques,
+				...root
+			} = data;
 
-		// 2. Validate Input
-		const validatedFields = sectionActiveSchema.safeParse(values);
-		if (!validatedFields.success) {
-			return { error: "INVALID_SCHEMA_DATA" };
-		}
+			const result = await prisma.$transaction(async (tx) => {
+				// 1. Locale-based cleanup
+				if (id) {
+					await tx.educationTranslation.deleteMany({
+						where: { educationId: id, locale },
+					});
 
-		// 3. Database Operation
-		await prisma.sectionActive.upsert({
-			where: { id: "ui-config" },
-			update: validatedFields.data,
-			create: {
-				id: "ui-config",
-				...validatedFields.data,
-			},
-		});
+					const currentTechs = await tx.technique.findMany({
+						where: { educationId: id },
+						select: { id: true },
+					});
+					const techIds = currentTechs.map((t) => t.id);
 
-		// 4. Cache Clearing
-		revalidatePath("/", "layout"); // Update public site
-		revalidatePath("/admin/settings"); // Update admin dashboard
+					await tx.techniqueTranslation.deleteMany({
+						where: { techniqueId: { in: techIds }, locale },
+					});
+					await tx.technique.deleteMany({ where: { educationId: id } });
+				}
 
-		return { success: "CONFIG_SYNCED" };
-	} catch (error) {
-		// Log the actual error to your terminal for debugging
-		console.error("[SECTION_UPDATE_ERROR]:", error);
-		return { error: "DATABASE_SYNC_FAILED" };
-	}
+				// 2. Prepare Atomic Upsert Data
+				const educationPayload = {
+					schoolName: root.schoolName,
+					schoolLogo: root.schoolLogo,
+					schoolWebsite: root.schoolWebsite,
+					location: root.location,
+					startDate: new Date(root.startDate),
+					endDate: root.isCurrent
+						? null
+						: root.endDate
+						? new Date(root.endDate)
+						: null,
+					isCurrent: root.isCurrent,
+					translations: {
+						create: { locale, degree, fieldOfStudy, description },
+					},
+					techniques: {
+						create: techniques.map((t) => ({
+							icon: t.icon,
+							translations: { create: { locale, name: t.name } },
+						})),
+					},
+				};
+
+				return await tx.education.upsert({
+					where: { id: id || "new-education" },
+					update: educationPayload,
+					create: educationPayload,
+				});
+			});
+
+			revalidatePath("/", "layout");
+			return { id: result.id };
+		},
+	);
 }
 
-// /generate write actions for certification create ,update and delete based on schema  model Certification {   id            String    @id @default(cuid())   issuer        String   coverUrl      String?   link          String? // External link to verify   issueDate     DateTime   expireDate    DateTime?   credentialUrl String?   isActive      Boolean   @default(true)    translations CertificationTranslation[]   createdAt    DateTime                   @default(now())   updatedAt    DateTime                   @updatedAt }  model CertificationTranslation {   id           String  @id @default(cuid())   locale       Locale   title        String // e.g., "AWS Certified Solutions Architect"   credentialId String?    description     String?       @db.Text   certificationId String   certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)    @@unique([certificationId, locale]) }
-
-import {
-	certificationSchema,
-	type CertificationFormValue,
-} from "@/server/validations";
-
-/**
- * Standardized Action Response Type
- */
-type ActionResponse<T = undefined> =
-	| { success: true; data?: T; message?: string }
-	| { success: false; error: string };
-
-/**
- * Creates or updates a certification and its associated translation.
- */
-export async function upsertCertificationAction(
-	rawInput: CertificationFormValue,
-): Promise<ActionResponse<{ id: string }>> {
-	// 1. Validate Input
-	const validated = certificationSchema.safeParse(rawInput);
-
-	if (!validated.success) {
-		return {
-			success: false,
-			error: `Validation failed: ${validated.error?.issues
-				.map((e) => e.message)
-				.join(", ")}`,
-		};
-	}
-
-	const { id, locale, title, credentialId, description, ...baseData } =
-		validated.data;
-
-	try {
-		const result = await prisma.$transaction(async (tx) => {
-			// 2. Manage Translations
-			// If updating, we replace the translation for the specific locale
-			if (id) {
-				await tx.certificationTranslation.deleteMany({
-					where: { certificationId: id, locale },
+export async function deleteEducationAction(id: string) {
+	return createSecureAction(
+		{ id },
+		{
+			schema: z.object({ id: z.string().min(1) }),
+			accessLevel: ["SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			await prisma.$transaction(async (tx) => {
+				const techniques = await tx.technique.findMany({
+					where: { educationId: data.id },
+					select: { id: true },
 				});
-			}
+				const techIds = techniques.map((t) => t.id);
 
-			// 3. Perform Upsert
-			// We use a specific ID if provided, otherwise Prisma generates a new CUID/UUID
-			return await tx.certification.upsert({
-				where: { id: id ?? "" },
-				update: {
-					...baseData,
-					issueDate: new Date(baseData.issueDate),
-					expireDate: baseData.expireDate
-						? new Date(baseData.expireDate)
-						: null,
+				await tx.techniqueTranslation.deleteMany({
+					where: { techniqueId: { in: techIds } },
+				});
+				await tx.technique.deleteMany({ where: { educationId: data.id } });
+				await tx.educationTranslation.deleteMany({
+					where: { educationId: data.id },
+				});
+				await tx.education.delete({ where: { id: data.id } });
+			});
+
+			revalidatePath("/", "layout");
+			return { success: true };
+		},
+	);
+}
+
+//
+
+export async function upsertCertificationAction(
+	values: CertificationFormValue,
+) {
+	return createSecureAction(
+		values,
+		{
+			schema: certificationSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const { id, locale, title, credentialId, description, ...root } = data;
+
+			const result = await prisma.$transaction(async (tx) => {
+				// 1. If editing, clean up the translation for this specific locale only
+				if (id) {
+					await tx.certificationTranslation.deleteMany({
+						where: { certificationId: id, locale },
+					});
+				}
+
+				const certPayload = {
+					issuer: root.issuer,
+					coverUrl: root.coverUrl,
+					link: root.link,
+					credentialUrl: root.credentialUrl,
+					isActive: root.isActive,
+					issueDate: new Date(root.issueDate),
+					expireDate: root.expireDate ? new Date(root.expireDate) : null,
 					translations: {
 						create: {
 							locale,
@@ -732,56 +570,67 @@ export async function upsertCertificationAction(
 							description: description || null,
 						},
 					},
-				},
+				};
+
+				return await tx.certification.upsert({
+					where: { id: id || "new-cert" },
+					update: certPayload,
+					create: certPayload,
+				});
+			});
+
+			revalidatePath("/", "layout");
+			return { id: result.id };
+		},
+	);
+}
+
+export async function deleteCertificationAction(id: string) {
+	return createSecureAction(
+		{ id },
+		{
+			schema: z.object({ id: z.string().min(1) }),
+			accessLevel: ["SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			// Note: CertificationTranslation is deleted automatically
+			// via 'onDelete: Cascade' in your schema.
+			await prisma.certification.delete({
+				where: { id: data.id },
+			});
+
+			revalidatePath("/", "layout");
+			return { success: true };
+		},
+	);
+}
+// /generate write actions for certification create ,update and delete based on schema  model Certification {   id            String    @id @default(cuid())   issuer        String   coverUrl      String?   link          String? // External link to verify   issueDate     DateTime   expireDate    DateTime?   credentialUrl String?   isActive      Boolean   @default(true)    translations CertificationTranslation[]   createdAt    DateTime                   @default(now())   updatedAt    DateTime                   @updatedAt }  model CertificationTranslation {   id           String  @id @default(cuid())   locale       Locale   title        String // e.g., "AWS Certified Solutions Architect"   credentialId String?    description     String?       @db.Text   certificationId String   certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)    @@unique([certificationId, locale]) }
+/** @format */
+
+export async function updateSectionStatusAction(values: SectionActiveValues) {
+	return createSecureAction(
+		values,
+		{
+			schema: sectionActiveSchema,
+			accessLevel: ["ADMIN", "SUPER_ADMIN", "OWNER"],
+		},
+		async (data) => {
+			const CONFIG_ID = "ui-config";
+
+			await prisma.sectionActive.upsert({
+				where: { id: CONFIG_ID },
+				update: data,
 				create: {
-					...baseData,
-					issueDate: new Date(baseData.issueDate),
-					expireDate: baseData.expireDate
-						? new Date(baseData.expireDate)
-						: null,
-					translations: {
-						create: {
-							locale,
-							title,
-							credentialId: credentialId || null,
-							description: description || null,
-						},
-					},
+					id: CONFIG_ID,
+					...data,
 				},
 			});
-		});
 
-		revalidatePath("/", "layout");
-		return { success: true, data: { id: result.id } };
-	} catch (error) {
-		console.error("[UPSERT_CERTIFICATION_ERROR]", error);
-		return { success: false, error: "An unexpected database error occurred." };
-	}
-}
+			// Revalidate multiple paths to ensure Admin and Public site stay in sync
+			revalidatePath("/", "layout");
+			revalidatePath("/admin/settings");
 
-/**
- * Deletes a certification.
- * Assumes 'onDelete: Cascade' is set in the Prisma Schema for translations.
- */
-export async function deleteCertificationAction(
-	id: string,
-): Promise<ActionResponse> {
-	if (!id)
-		return { success: false, error: "A valid ID is required for deletion." };
-
-	try {
-		await prisma.certification.delete({
-			where: { id },
-		});
-
-		revalidatePath("/", "layout");
-		return { success: true, message: "Certification deleted successfully." };
-	} catch (error) {
-		console.error("[DELETE_CERTIFICATION_ERROR]", error);
-		return {
-			success: false,
-			error:
-				"Failed to delete certification. It may have already been removed.",
-		};
-	}
+			return { success: true };
+		},
+	);
 }

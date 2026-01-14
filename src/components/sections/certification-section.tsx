@@ -10,111 +10,130 @@ import {
 	Lock,
 	Medal,
 } from "lucide-react";
-import { MotionViewport } from "../motion-viewport";
-import { Certification } from "@prisma/client";
+import { Locale } from "@prisma/client";
+import { MotionSection } from "../shared/motion-viewport";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
-interface CertificationsSectionProps {
-	certifications: Certification[];
+// Assuming you have a type that includes the translation for the current locale
+import { TransformedCertification } from "@/types";
+
+interface Props {
+	certifications: TransformedCertification[] | null;
+	locale: Locale;
 }
 
-// Helper to pick icons based on title keywords
-const getIcon = (title: string) => {
-	const t = title.toLowerCase();
-	if (t.includes("security") || t.includes("lock"))
-		return <Lock className='text-yellow-500' size={40} />;
+const getIcon = (issuer: string) => {
+	const t = issuer.toLowerCase();
+	if (t.includes("security") || t.includes("offsec"))
+		return <Lock className='text-yellow-500' size={32} />;
 	if (t.includes("cloud") || t.includes("aws") || t.includes("azure"))
-		return <Zap className='text-yellow-500' size={40} />;
+		return <Zap className='text-yellow-500' size={32} />;
 	if (t.includes("google") || t.includes("shield"))
-		return <ShieldCheck className='text-yellow-500' size={40} />;
+		return <ShieldCheck className='text-yellow-500' size={32} />;
 	if (t.includes("scrum") || t.includes("agile"))
-		return <Award className='text-yellow-500' size={40} />;
-	return <Medal className='text-yellow-500' size={40} />;
+		return <Award className='text-yellow-500' size={32} />;
+	return <Medal className='text-yellow-500' size={32} />;
 };
 
-export const CertificationsSection = ({
-	certifications,
-}: CertificationsSectionProps) => {
+export const CertificationsSection = ({ certifications, locale }: Props) => {
+	const t = useTranslations("CertificationsSection");
+	const isAr = locale === "ar";
+
 	return (
 		<section
 			id='certifications'
-			className='py-24 bg-background relative overflow-hidden'>
-			{/* Decorative Background Glow */}
-			<div className='absolute top-0 right-0 w-125 h-125 bg-yellow-500/5 blur-[120px] rounded-full pointer-events-none' />
+			className='py-24 bg-background relative overflow-hidden transition-colors duration-500'>
+			{/* Adaptive Glow */}
+			<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/10 dark:bg-yellow-500/5 blur-[120px] rounded-full pointer-events-none' />
 
-			<div className='container mx-auto px-6 max-w-7xl'>
+			<div className='container mx-auto px-6 max-w-7xl relative z-10'>
 				<div className='text-center mb-16'>
 					<motion.div
 						initial={{ opacity: 0, y: 20 }}
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={{ once: true }}>
-						<h2 className='text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-800'>
-							Professional Credentials
+						<h2 className='text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-800 dark:from-yellow-200 dark:via-yellow-500 dark:to-yellow-800 uppercase tracking-tight'>
+							{t("title")}
 						</h2>
-						<p className='text-muted-foreground mt-4 text-lg'>
-							Industry-recognized certifications and verified expertise
+						<p className='text-muted-foreground mt-4 text-lg max-w-2xl mx-auto'>
+							{t("subtitle")}
 						</p>
 					</motion.div>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
-					{certifications.map((cert, i) => (
-						<MotionViewport
+				<div
+					className={cn(
+						"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
+						isAr ? "rtl" : "ltr",
+					)}>
+					{certifications?.map((cert, i) => (
+						<MotionSection
 							key={cert.id}
 							delay={i * 0.1}
 							preset='fadeInUp'
 							className='group perspective-1000'>
 							<motion.div
-								whileHover={{
-									rotateY: 5,
-									rotateX: -5,
-									scale: 1.02,
-									y: -5,
-								}}
-								transition={{ type: "spring", stiffness: 300, damping: 20 }}
-								className='relative h-full bg-zinc-950 border border-yellow-600/20 p-8 rounded-3xl shadow-xl flex flex-col items-start transition-all duration-300 group-hover:border-yellow-600/50 group-hover:bg-zinc-900/40 group-hover:shadow-yellow-500/5'>
-								{/* Background Decorative Icon */}
-								<div className='absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none'>
-									<Award size={100} />
+								whileHover={{ y: -8, rotateX: 2 }}
+								className='relative h-full flex flex-col bg-slate-50/50 dark:bg-zinc-950 border border-slate-200 dark:border-yellow-600/20 p-8 rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-500 hover:border-yellow-500/50 dark:hover:bg-zinc-900/40'>
+								{/* Background Decorative Watermark */}
+								<div
+									className={cn(
+										"absolute top-4 opacity-[0.03] dark:opacity-[0.05] transition-opacity pointer-events-none",
+										isAr ? "left-4" : "right-4",
+									)}>
+									<Award size={120} />
 								</div>
 
-								{/* Header: Icon & Verified Tag */}
-								<div className='w-full flex justify-between items-start mb-6'>
-									<div className='p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20'>
-										{cert.imageUrl ? (
-											<img
-												src={cert.imageUrl}
-												alt={cert.title}
+								<div className='flex justify-between items-start mb-8'>
+									<div className='p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 shadow-inner'>
+										{cert.coverUrl ? (
+											<Image
+												src={cert.coverUrl}
+												alt={cert.issuer}
 												className='w-10 h-10 object-contain'
+												width={40}
+												height={40}
 											/>
 										) : (
-											getIcon(cert.title)
+											getIcon(cert.issuer)
 										)}
 									</div>
-									<span className='text-[10px] uppercase tracking-[0.2em] text-yellow-600 font-bold px-3 py-1 bg-yellow-600/5 rounded-full border border-yellow-600/10'>
-										Verified
-									</span>
+									<div className='flex flex-col items-end gap-2'>
+										<span className='text-[9px] uppercase tracking-[0.2em] text-yellow-600 font-black px-3 py-1 bg-yellow-500/10 rounded-lg border border-yellow-500/20'>
+											{t("verified")}
+										</span>
+									</div>
 								</div>
 
-								{/* Content */}
 								<div className='grow'>
-									<h3 className='text-2xl font-bold text-white mb-2 leading-tight group-hover:text-yellow-400 transition-colors'>
+									<h3 className='text-2xl font-bold text-foreground mb-2 leading-tight group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors'>
 										{cert.title}
 									</h3>
-									<p className='text-zinc-400 text-sm font-medium mb-1'>
+									<p className='text-muted-foreground text-sm font-semibold mb-1'>
 										{cert.issuer}
 									</p>
-									<p className='text-yellow-600/60 text-xs font-mono mb-6'>
-										{cert.issueDate}
+									<p className='text-yellow-600/70 dark:text-yellow-500/40 text-xs font-mono font-bold'>
+										{new Date(cert.issueDate).toLocaleDateString(locale, {
+											year: "numeric",
+											month: "long",
+										})}
 									</p>
+
+									{cert.description && (
+										<p className='mt-4 text-sm text-muted-foreground/80 leading-relaxed line-clamp-3 border-t border-slate-200 dark:border-white/5 pt-4'>
+											{cert.description}
+										</p>
+									)}
 								</div>
 
-								{/* Footer: Credential ID & Link */}
-								<div className='w-full pt-6 border-t border-white/5 mt-auto flex justify-between items-center'>
+								<div className='w-full pt-6 mt-8 border-t border-slate-200 dark:border-white/5 flex justify-between items-end'>
 									<div>
-										<p className='text-[9px] text-zinc-500 uppercase font-bold tracking-widest mb-1'>
-											Credential ID
+										<p className='text-[9px] text-muted-foreground uppercase font-black tracking-widest mb-1'>
+											{t("credentialId")}
 										</p>
-										<p className='text-xs text-zinc-300 font-mono'>
+										<p className='text-xs text-foreground font-mono bg-slate-100 dark:bg-white/5 px-2 py-1 rounded'>
 											{cert.credentialId || "N/A"}
 										</p>
 									</div>
@@ -124,141 +143,18 @@ export const CertificationsSection = ({
 											href={cert.link}
 											target='_blank'
 											rel='noopener noreferrer'
+											whileHover={{ scale: 1.1 }}
 											whileTap={{ scale: 0.9 }}
-											className='p-3 bg-yellow-600 text-black rounded-xl transition-all shadow-[0_0_15px_rgba(202,138,4,0.3)] hover:bg-yellow-400'>
-											<ExternalLink size={16} />
+											className='p-3 bg-yellow-600 text-white dark:text-black rounded-xl shadow-lg shadow-yellow-600/20 hover:bg-yellow-500 transition-colors'>
+											<ExternalLink size={18} />
 										</motion.a>
 									)}
 								</div>
 							</motion.div>
-						</MotionViewport>
+						</MotionSection>
 					))}
 				</div>
 			</div>
 		</section>
 	);
-}; // /** @format */
-// "use client";
-
-// import { motion } from "framer-motion";
-// import { ExternalLink, Award, ShieldCheck, Zap, Lock } from "lucide-react";
-// import { MotionViewport } from "../motion-viewport";
-
-// const certs = [
-//     {
-//         name: "AWS Solutions Architect",
-//         issuer: "Amazon Web Services",
-//         date: "Dec 2024",
-//         id: "AWS-7782-9910",
-//         skills: ["Cloud", "Security", "Scalability"],
-//         icon: <Zap className="text-yellow-500" size={40} />,
-//     },
-//     {
-//         name: "Offensive Security (OSCP)",
-//         issuer: "OffSec",
-//         date: "Jan 2024",
-//         id: "OS-102-4451",
-//         skills: ["Pentesting", "Linux", "Exploitation"],
-//         icon: <Lock className="text-yellow-500" size={40} />,
-//     },
-//     {
-//         name: "Professional Scrum Master",
-//         issuer: "Scrum.org",
-//         date: "Mar 2024",
-//         id: "PSM-I-9920",
-//         skills: ["Agile", "Leadership", "Planning"],
-//         icon: <Award className="text-yellow-500" size={40} />,
-//     },
-//     {
-//         name: "Google Cloud Engineer",
-//         issuer: "Google Cloud",
-//         date: "Nov 2024",
-//         id: "GCP-5512-0091",
-//         skills: ["DevOps", "Kubernetes", "Data"],
-//         icon: <ShieldCheck className="text-yellow-500" size={40} />,
-//     },
-// ];
-
-// export const CertificationsSection = () => (
-//     <section className='py-24 bg-background relative overflow-hidden'>
-//         {/* Decorative Background Glow */}
-//         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/5 blur-[120px] rounded-full pointer-events-none" />
-
-//         <div className='container mx-auto px-6 max-w-7xl'>
-//             <div className='text-center mb-16'>
-//                 <h2 className='text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-800'>
-//                     Professional Credentials
-//                 </h2>
-//                 <p className='text-muted-foreground mt-4 text-lg'>
-//                     Industry-recognized certifications and verified expertise
-//                 </p>
-//             </div>
-
-//             {/* Grid: 1 col on mobile, 2 col on tablet, 4 col on large screens for equal size */}
-//             <div className='grid grid-cols-1 md:grid-cols-2   gap-12'>
-//                 {certs.map((cert, i) => (
-//                     <MotionViewport
-//                         key={i}
-//                         delay={i * 0.1}
-//                         preset="fadeInUp"
-//                         className='group perspective-1000'
-//                     >
-//                         <motion.div
-//                             whileHover={{
-//                                 rotateY: 5,
-//                                 rotateX: -5,
-//                                 scale: 1.02,
-//                                 y: -5
-//                             }}
-//                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-//                             className='relative h-full bg-zinc-950 border border-yellow-600/20 p-6 rounded-2xl shadow-xl flex flex-col items-start transition-colors group-hover:border-yellow-600/50 group-hover:bg-zinc-900/50'
-//                         >
-//                             {/* Certificate Decoration */}
-//                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-//                                 <Award size={80} />
-//                             </div>
-
-//                             <div className="mb-4 p-3 bg-yellow-500/10 rounded-xl">
-//                                 {cert.icon}
-//                             </div>
-
-//                             <span className='text-[10px] uppercase tracking-[0.2em] text-yellow-600 font-bold mb-2'>
-//                                 Verified Professional
-//                             </span>
-
-//                             <h3 className='text-xl font-bold text-white mb-2 leading-tight min-h-[56px]'>
-//                                 {cert.name}
-//                             </h3>
-
-//                             <p className='text-zinc-400 text-sm font-medium mb-4'>{cert.issuer}</p>
-
-//                             <div className='flex flex-wrap gap-1.5 mb-8'>
-//                                 {cert.skills.map((s) => (
-//                                     <span
-//                                         key={s}
-//                                         className='px-2 py-0.5 bg-yellow-600/5 border border-yellow-600/10 text-yellow-500/80 text-[10px] rounded-md'>
-//                                         {s}
-//                                     </span>
-//                                 ))}
-//                             </div>
-
-//                             {/* Footer Section - Pushed to Bottom */}
-//                             <div className='w-full pt-4 border-t border-white/5 mt-auto flex justify-between items-center'>
-//                                 <div className='text-[10px]'>
-//                                     <p className='text-zinc-500 uppercase font-bold tracking-tighter'>Credential ID</p>
-//                                     <p className='text-zinc-300 font-mono'>{cert.id}</p>
-//                                 </div>
-//                                 <motion.button
-//                                     whileTap={{ scale: 0.9 }}
-//                                     className='p-2 bg-yellow-600/90 hover:bg-yellow-500 text-black rounded-lg transition-all shadow-[0_0_15px_rgba(202,138,4,0.2)] hover:shadow-[0_0_20px_rgba(202,138,4,0.4)]'
-//                                 >
-//                                     <ExternalLink size={14} />
-//                                 </motion.button>
-//                             </div>
-//                         </motion.div>
-//                     </MotionViewport>
-//                 ))}
-//             </div>
-//         </div>
-//     </section>
-// );
+};

@@ -11,24 +11,21 @@ import Link from "next/link";
 import DashboardCharts from "@/components/dashboard/chart";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card"; // Assuming shadcn/ui
 import { getUserRole } from "@/server/data/users";
+import { UserRole } from "@prisma/client";
+import { protectAdmin } from "@/lib/admin-guard";
 
-export default async function DashboardPage({
-	params,
-}: {
-	params: { locale: string };
-}) {
-	const { locale } = params;
-	const session = await auth();
-	const userRole = await getUserRole(session?.user?.id as string);
+interface AdminPageProps {
+	params: Promise<{ locale: string }>;
+}
+export default async function DashboardPage({ params }: AdminPageProps) {
+	const { locale } = await params;
+	const session = await protectAdmin();
 
-	// 1. Strict Server-Side Guard
-	if (!session?.user || userRole !== UserRole.ADMIN) {
-		redirect(`/auth/sign-in`);
-	}
+	// 1. Security Gate
+	// Fix: Changed '||' to '&&' to ensure the user has one of the allowed roles.
 
 	// 2. Fetch Real Data from Prisma (Parallel fetching for speed)
 	const [projectCount, pendingMessageCount, activeUsers] = await Promise.all([

@@ -13,6 +13,7 @@ import Image from "next/image";
 import { Locale } from "@prisma/client";
 import { MotionSection } from "@/components/shared/motion-viewport";
 import ReadingProgress from "@/components/reading-progress";
+import { EditorContent } from "@/components/editor-content";
 
 const calculateReadTime = (content: string) => {
 	const words = content.replace(/<[^>]*>/g, "").split(/\s+/).length;
@@ -115,32 +116,16 @@ export default async function BlogDetailPage({
 							width={1200}
 							height={600}
 							unoptimized
-							className='w-full aspect-[21/9] object-cover'
+							className='w-full aspect-21/9 object-cover'
 						/>
 					</MotionSection>
 				</div>
 
 				{/* Main Content Body */}
 				<div className='container mx-auto px-6 max-w-185'>
-					<div
-						className={cn(
-							"prose prose-lg dark:prose-invert max-w-none",
-							// Content Typography: Use Sans for Arabic as Serif doesn't always look good
-							isAr ? "prose-p:font-sans" : "prose-p:font-serif",
-							"prose-p:text-[21px] prose-p:leading-[1.6] prose-p:mb-8 prose-p:text-zinc-800 dark:prose-p:text-zinc-200",
-							"prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tighter prose-headings:mt-12 prose-headings:mb-6",
-							"prose-h2:text-3xl prose-h3:text-2xl",
-							"prose-img:rounded-xl prose-img:my-10 prose-img:border",
-							"prose-pre:bg-[#0d1117] prose-pre:border prose-pre:rounded-xl prose-pre:p-6",
-							"prose-code:bg-muted prose-code:px-1.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none",
-							isAr
-								? "prose-blockquote:border-r-primary prose-blockquote:border-r-[3px] prose-blockquote:border-l-0 prose-blockquote:pr-6"
-								: "prose-blockquote:border-l-primary prose-blockquote:border-l-[3px] prose-blockquote:pl-6",
-							"prose-blockquote:italic prose-blockquote:text-2xl prose-blockquote:text-zinc-500 prose-blockquote:font-serif",
-						)}
-						dangerouslySetInnerHTML={{ __html: post.content }}
-					/>
+					<EditorContent content={post.content} />
 				</div>
+				{/* Y&q%sGm*82a5GJ-#: */}
 			</article>
 		</div>
 	);

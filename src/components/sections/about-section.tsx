@@ -12,6 +12,7 @@ import {
 	ShieldCheck,
 	Zap,
 	Cpu,
+	ChevronDown,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -19,8 +20,8 @@ import { cn } from "@/lib/utils";
 import { Locale } from "@prisma/client";
 import { AboutData } from "@/types";
 import { MotionSection } from "../shared/motion-viewport";
+import { BackgroundRippleEffect } from "../background-ripple-effect";
 
-/* ----------------------------- Icons Map ----------------------------- */
 const ICON_MAP: Record<string, LucideIcon> = {
 	Terminal,
 	Layers,
@@ -30,14 +31,14 @@ const ICON_MAP: Record<string, LucideIcon> = {
 	Cpu,
 };
 
-/* ----------------------------- Props ----------------------------- */
-interface AboutSectionProps {
+export function AboutSection({
+	aboutData,
+	locale,
+}: {
 	aboutData: AboutData | null;
 	locale: Locale;
-}
-
-/* ----------------------------- About Section ----------------------------- */
-export function AboutSection({ aboutData, locale }: AboutSectionProps) {
+}) {
+	const [isExpanded, setIsExpanded] = React.useState(false);
 	const sectionRef = React.useRef<HTMLElement>(null);
 	const isRTL = locale === "ar";
 
@@ -46,166 +47,168 @@ export function AboutSection({ aboutData, locale }: AboutSectionProps) {
 		offset: ["start end", "end start"],
 	});
 
-	// Parallax values
-	const yParallax = useTransform(scrollYProgress, [0, 1], [0, -40]);
-	const rotateParallax = useTransform(
-		scrollYProgress,
-		[0, 1],
-		isRTL ? [-2, 2] : [2, -2],
-	);
-	if (!aboutData) return null;
+	// const yParallax = useTransform(scrollYProgress, [0, 1], [0, -60]);
+	const rotateParallax = useTransform(scrollYProgress, [0, 1], [2, -2]);
 
+	if (!aboutData) return null;
 	const { title, subtitle, description } = aboutData.content;
 
+	const shouldTruncate = description.length > 250;
+	const displayedDescription =
+		isExpanded || !shouldTruncate
+			? description
+			: `${description.slice(0, 250)}...`;
 	return (
 		<MotionSection
 			ref={sectionRef}
 			id='about'
 			as='section'
-			preset='fadeInUp'
 			className={cn(
-				"relative overflow-hidden py-24 md:py-32",
+				"relative py-24 lg:py-40 overflow-hidden bg-background transition-colors duration-500",
 				isRTL && "direction-rtl text-right",
 			)}>
-			{/* Ambient Glow */}
-			<div
-				className={cn(
-					"absolute -top-32 size-112 bg-primary/10 blur-[140px] rounded-full -z-10",
-					isRTL ? "-left-32" : "-right-32",
-				)}
-			/>
+			{/* --- BACKGROUND LAYER --- */}
+			<div className='absolute inset-0 -z-10 pointer-events-none'>
+				{/* Ripple Effect - Barely visible in light mode, subtle in dark */}
+				<div className='absolute -z-10 inset-0 opacity-70 dark:opacity-50 pointer-events-none'>
+					<BackgroundRippleEffect rows={12} cols={44} cellSize={60} />
+				</div>
 
-			{/* Container */}
+				{/* Adaptive Glows */}
+				<div className='absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl'>
+					<div className='absolute top-10 right-0 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full' />
+					<div className='absolute bottom-10 left-0 w-96 h-96 bg-cyan-500/10 dark:bg-cyan-500/5 blur-[120px] rounded-full' />
+				</div>
+			</div>
+
 			<div className='container relative z-10 mx-auto px-6'>
-				<div className='grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16'>
-					{/* Left Content */}
-					<div className='lg:col-span-7 lg:sticky lg:top-0 h-fit'>
-						<motion.div
-							initial={{ opacity: 0, x: isRTL ? 24 : -24 }}
-							whileInView={{ opacity: 1, x: 0 }}
-							viewport={{ once: true }}
-							transition={{ duration: 0.7, ease: "easeOut" }}
-							className='space-y-8'>
-							{/* Subtitle */}
-							<div
-								className={cn(
-									"flex items-center gap-4",
-									// isRTL && "flex-row-reverse",
-								)}>
-								<span className='h-px w-10 bg-primary' />
-								<span className='text-[11px] font-mono tracking-[0.35em] uppercase text-primary/80'>
+				<div className='grid grid-cols-1 lg:grid-cols-12 gap-16 lg:items-start'>
+					{/* --- LEFT SIDE: Sticky Content --- */}
+
+					<div className='lg:col-span-6 lg:sticky lg:top-32 space-y-10'>
+						<div className='space-y-6'>
+							<motion.div
+								initial={{ opacity: 0, x: -20 }}
+								whileInView={{ opacity: 1, x: 0 }}
+								className='inline-flex items-center gap-3'>
+								<div className='h-px w-8 bg-indigo-500' />
+
+								<span className='text-[10px] font-bold tracking-[0.3em] uppercase text-indigo-500/80'>
 									{subtitle}
 								</span>
-							</div>
+							</motion.div>
 
-							{/* Title */}
-							<h2 className='text-4xl md:text-5xl xl:text-6xl font-extrabold tracking-tight leading-[0.95] wf'>
-								{isRTL
-									? title // Arabic: just show title normally
-									: title.split(" ").map((word: string, i: number) => (
-											<span
-												key={i}
-												className={cn(
-													"inline-block mr-3",
-													word.toLowerCase() === "solutions" &&
-														"text-muted-foreground/20 italic font-light",
-												)}>
-												{word}
-											</span>
-									  ))}
-								<span className='text-primary'>.</span>
+							<h2 className='text-3xl md:text-4xl font-black tracking-tight leading-[0.9] text-foreground'>
+								{title.split(" ").map((word, i) => (
+									<span
+										key={i}
+										className={cn(
+											"inline-block mr-3",
+
+											(word.toLowerCase() === "imagination" ||
+												word.toLowerCase() === "الخيال") &&
+												"text-zinc-500/30 italic font-serif font-light",
+										)}>
+										{word}
+									</span>
+								))}
+
+								<span className='text-indigo-500'>.</span>
 							</h2>
 
-							{/* Description */}
-							<p
-								className={cn(
-									"max-w-xl text-lg leading-relaxed text-muted-foreground",
-									isRTL
-										? "border-s-2 ps-6 border-primary/20"
-										: "border-s-2 ps-6 border-primary/20",
-								)}>
-								{description}
-							</p>
+							<div className='relative'>
+								<motion.p
+									layout
+									className='text-base md:text-lg leading-relaxed text-muted-foreground border-l-2 border-indigo-500/20 pl-6'>
+									{displayedDescription}
+								</motion.p>
 
-							{/* Stats */}
-							<div className='grid grid-cols-2 gap-x-12 gap-y-12'>
-								{aboutData.statuses.map((status, i) => (
-									<motion.div
-										key={status.id}
-										initial={{ opacity: 0, y: 20 }}
-										whileInView={{ opacity: 1, y: 0 }}
-										transition={{ delay: i * 0.1 }}
-										className='group'>
-										<div
+								{shouldTruncate && (
+									<button
+										onClick={() => setIsExpanded(!isExpanded)}
+										className='mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-indigo-500 hover:text-indigo-400 transition-colors pl-6'>
+										{isExpanded ? "Show Less" : "Read More"}
+
+										<ChevronDown
+											size={14}
 											className={cn(
-												"flex items-center gap-2 mb-3 text-muted-foreground",
-												// isRTL && "flex-row-reverse",
-											)}>
-											<Plus
-												size={14}
-												className='group-hover:text-primary group-hover:rotate-90 transition-all duration-500'
-											/>
-											<span className='text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest'>
-												{status.label}
-											</span>
-										</div>
-										<div className='flex items-baseline'>
-											<span className='text-3xl font-bold tracking-tighter tabular-nums transition-colors group-hover:text-primary'>
-												{status.value}
-											</span>
-										</div>
-									</motion.div>
-								))}
-							</div>
-						</motion.div>
-					</div>
+												"transition-transform",
 
-					{/* Right Content */}
-					<div className='lg:col-span-5 space-y-8'>
-						{aboutData.pillars?.map((pillar, index) => {
+												isExpanded && "rotate-180",
+											)}
+										/>
+									</button>
+								)}
+							</div>
+						</div>
+
+						{/* Stats Grid */}
+
+						<div className='grid grid-cols-2 gap-8 pt-4'>
+							{aboutData.statuses.map((status, i) => (
+								<motion.div
+									key={status.id}
+									initial={{ opacity: 0, y: 10 }}
+									whileInView={{ opacity: 1, y: 0 }}
+									transition={{ delay: i * 0.1 }}
+									className='group'>
+									<div className='flex items-center gap-2 mb-1'>
+										<Plus
+											size={12}
+											className='text-indigo-500 group-hover:rotate-90 transition-transform'
+										/>
+
+										<span className='text-[9px] font-mono uppercase tracking-tighter text-muted-foreground/60'>
+											{status.label}
+										</span>
+									</div>
+
+									<div className='text-3xl font-black tracking-tighter text-foreground group-hover:text-indigo-500 transition-colors'>
+										{status.value}
+									</div>
+								</motion.div>
+							))}
+						</div>
+					</div>
+					{/* --- RIGHT SIDE: Pillar Cards --- */}
+					<div className='lg:col-span-6 space-y-6 md:space-y-8'>
+						{aboutData.pillars?.map((pillar, idx) => {
 							const Icon = ICON_MAP[pillar.icon] ?? Sparkles;
 							return (
 								<motion.div
-									key={pillar.id}
-									style={{ y: yParallax, rotate: rotateParallax }}
+									key={pillar.id || idx}
+									style={{ y: rotateParallax, rotate: rotateParallax }}
 									className='group relative'>
-									{/* Glow Border */}
-									<div className='absolute -inset-px rounded-3xl bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:via-primary/40 transition' />
+									<div className='absolute -inset-px bg-linear-to-r from-transparent via-border to-transparent rounded-4xl opacity-50 group-hover:via-primary/50 transition-all duration-500' />
 
-									{/* Card */}
-									<div className='relative rounded-3xl border border-border/40 bg-card/60 backdrop-blur p-6 transition-all duration-500 hover:bg-card'>
-										<div
-											className={cn("flex gap-5", isRTL && "flex-row-reverse")}>
-											{/* Icon */}
+									<div className='relative bg-card/50 backdrop-blur-sm border border-border/40 hover:bg-card transition-all duration-500 rounded-4xl p-4 md:p-6'>
+										<div className='flex gap-4 items-start'>
+											{/* Technical Icon Wrapper */}
 											<div className='relative shrink-0'>
-												<div className='absolute inset-0 bg-primary/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity' />
-												<div className='relative size-14 rounded-2xl bg-background border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary transition'>
-													<Icon size={28} />
+												<div className='absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700' />
+												<div className='relative size-16 rounded-2xl bg-background border-2 border-border/50 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/50 transition-all duration-500'>
+													<Icon size={30} strokeWidth={1.5} />
+													<div className='absolute -top-1 -right-1 size-2 bg-primary rounded-full scale-0 group-hover:scale-100 transition-transform' />
 												</div>
 											</div>
 
-											{/* Pillar Content */}
 											<div className='flex-1 space-y-2'>
 												<div className='flex items-center justify-between'>
-													<h3 className='text-xl font-semibold'>
+													<h3 className='text-2xl font-bold tracking-tight'>
 														{pillar.title}
 													</h3>
 													<span className='font-mono text-xs text-muted-foreground/30'>
-														[{String(index + 1).padStart(2, "0")}]
+														[{idx + 1 < 10 ? `0${idx + 1}` : idx + 1}]
 													</span>
 												</div>
-												<p className='text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition'>
+												<p className='text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors'>
 													{pillar.description}
 												</p>
 											</div>
 
-											{/* Arrow */}
-											<div
-												className={cn(
-													"hidden xl:flex size-11 items-center justify-center rounded-full border border-border text-muted-foreground group-hover:border-primary group-hover:text-primary group-hover:scale-110 transition",
-													isRTL && "group-hover:-rotate-45",
-												)}>
-												<ArrowUpRight size={18} />
+											{/* Action Decoration */}
+											<div className='hidden xl:flex size-12 rounded-full border border-border items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:text-primary group-hover:border-primary transition-all duration-500'>
+												<ArrowUpRight size={20} />
 											</div>
 										</div>
 									</div>

@@ -2,11 +2,14 @@
 "use client";
 
 import Link from "next/link";
-import { FolderCode, Zap } from "lucide-react";
+import { FolderCode, Zap, ArrowRight, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ProjectCard } from "../project-card";
 import { TransformedProject } from "@/types/project-types";
 import { Locale } from "@prisma/client";
+import { MotionSection } from "../shared/motion-viewport";
 
 interface Props {
 	projectsData: TransformedProject[];
@@ -14,78 +17,94 @@ interface Props {
 }
 
 export const ProjectsSection = ({ projectsData, locale }: Props) => {
+	const t = useTranslations("ProjectsSection");
 	const isAr = locale === "ar";
-	const dir = isAr ? "rtl" : "ltr";
-
-	const content = {
-		en: {
-			title: "Featured",
-			subtitle: "Projects",
-			desc: "A collection of systems bridging the gap between theoretical research and scalable engineering.",
-			total: "Projects Total",
-			viewAll: "View All Projects",
-		},
-		ar: {
-			title: "المشاريع",
-			subtitle: "المختارة",
-			desc: "مجموعة من الأنظمة التي تجسر الفجوة بين البحث النظري والهندسة القابلة للتطوير.",
-			total: "إجمالي المشاريع",
-			viewAll: "عرض جميع المشاريع",
-		},
-	}[locale];
-
-	const featuredProjects = projectsData?.slice(0, 3);
+	const featuredProjects = projectsData?.slice(0, 3) || [];
 
 	return (
-		<section
-			id='projects'
-			dir={dir}
-			className='py-24 bg-background relative overflow-hidden'>
-			<div className='container mx-auto px-6 md:px-12'>
-				<div
-					className={`flex flex-col md:flex-row justify-between items-center mb-16 gap-6`}>
-					<div className={`space-y-3 ${isAr ? "text-right" : "text-left"}`}>
-						<h2 className='text-4xl font-bold tracking-tight'>
-							{content.title}{" "}
-							<span className='text-primary'>{content.subtitle}</span>
+		<section id='projects' className='relative py-24 overflow-hidden'>
+			{/* Background Glow */}
+			<div className='absolute top-0 right-0 -z-10 h-125 w-125 rounded-full bg-primary/5 blur-[120px]' />
+
+			<div className='container mx-auto px-6 relative z-10'>
+				<div className='flex flex-col md:flex-row justify-between items-center mb-16 gap-8'>
+					<MotionSection preset='fadeInRight' className='max-w-2xl'>
+						<div className='flex items-center gap-3 mb-4'>
+							<div className='h-px w-8 bg-primary/50' />
+							<span className='text-sm font-bold tracking-widest uppercase text-primary/80'>
+								{isAr ? "معرض الأعمال" : "Portfolio"}
+							</span>
+						</div>
+
+						<h2 className='text-4xl md:text-5xl font-extrabold tracking-tight mb-6'>
+							{t("titleStart")}{" "}
+							<span className='bg-linear-to-r from-primary to-blue-500 bg-clip-text text-transparent italic'>
+								{t("titleEnd")}
+							</span>
 						</h2>
-						<p className='text-muted-foreground max-w-xl text-lg'>
-							{content.desc}
+
+						<p className='text-muted-foreground text-lg leading-relaxed'>
+							{t("description")}
 						</p>
-					</div>
-					<div className='flex items-center gap-2 text-sm font-medium text-muted-foreground bg-muted/50 px-4 py-2 rounded-full border'>
-						<FolderCode className='w-4 h-4 text-primary' />
-						<span>
-							{projectsData?.length || 0} {content.total}
-						</span>
-					</div>
+					</MotionSection>
+
+					<MotionSection preset='fadeInUp' className='shrink'>
+						<div className='group flex items-center gap-3 bg-zinc-900/50 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-white/5 transition-all hover:border-primary/30'>
+							<div className='p-2 rounded-lg bg-primary/10 text-primary'>
+								<FolderCode className='w-5 h-5' />
+							</div>
+							<div className='flex flex-col'>
+								<span className='text-[10px] uppercase tracking-tighter text-zinc-500 font-bold'>
+									{t("totalProjects")}
+								</span>
+								<span className='text-lg font-mono font-bold leading-none'>
+									{projectsData?.length || 0}
+								</span>
+							</div>
+						</div>
+					</MotionSection>
 				</div>
 
-				<div className='flex flex-wrap justify-center gap-8'>
-					{featuredProjects?.map((project) => (
-						<div
+				<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch'>
+					{featuredProjects.map((project, index) => (
+						<motion.div
 							key={project.id}
-							className='w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.5rem)] max-w-sm'>
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ delay: index * 0.1, duration: 0.5 }}
+							className='flex h-full'>
 							<ProjectCard projectsData={project} locale={locale} />
-						</div>
+						</motion.div>
 					))}
 				</div>
 
-				<div className='mt-16 flex flex-col items-center gap-4'>
+				<MotionSection
+					preset='fadeInUp'
+					className='mt-20 flex flex-col items-center'>
 					<Button
 						asChild
+						variant='outline'
 						size='lg'
-						className='group rounded-full px-12 border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all duration-300'>
-						<Link href={`/${locale}/projects`}>
-							{content.viewAll}
-							<Zap
-								className={`${
-									isAr ? "mr-2" : "ml-2"
-								} h-4 w-4 group-hover:scale-125 transition-transform`}
-							/>
+						className='group relative h-14 rounded-full px-10 border-white/10 bg-zinc-900/50 hover:bg-primary hover:text-primary-foreground transition-all duration-500 shadow-xl'>
+						<Link
+							href={`/${locale}/projects`}
+							className='flex items-center gap-3'>
+							<span className='font-bold tracking-wide uppercase text-sm'>
+								{t("viewAll")}
+							</span>
+							<Zap className='h-4 w-4 fill-current group-hover:scale-125 transition-transform' />
+							{isAr ? (
+								<ArrowLeft className='h-4 w-4' />
+							) : (
+								<ArrowRight className='h-4 w-4' />
+							)}
 						</Link>
 					</Button>
-				</div>
+					<p className='mt-6 text-xs font-medium text-zinc-500 uppercase tracking-widest'>
+						{t("footerText")}
+					</p>
+				</MotionSection>
 			</div>
 		</section>
 	);

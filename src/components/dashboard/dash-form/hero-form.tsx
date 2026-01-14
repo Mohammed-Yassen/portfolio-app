@@ -58,7 +58,7 @@ export const HeroForm = ({ initialData, locale }: Props) => {
 			availability: initialData?.availability ?? "AVAILABLE",
 			primaryImage: initialData?.primaryImage ?? "",
 			isActive: initialData?.isActive ?? false,
-			resumeUrl: initialData?.resumeUrl ?? "",
+			resumeUrl: initialData?.content?.resumeUrl ?? "",
 			locale: locale,
 			greeting: initialData?.content?.greeting ?? "",
 			name: initialData?.content?.name ?? "",
@@ -153,7 +153,7 @@ export const HeroForm = ({ initialData, locale }: Props) => {
 				<div className='grid grid-cols-1 md:grid-cols-12   gap-6'>
 					<aside className=' md:col-span-4 space-y-6 '>
 						{/* Status Card */}
-						<div className='bg-white dark:bg-zinc-950 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 space-y-4'>
+						<div className='bg-white dark:bg-zinc-950 p-6 rounded-4xl border border-zinc-200 dark:border-zinc-800 space-y-4'>
 							<h3 className='text-sm font-bold uppercase tracking-wider text-zinc-400'>
 								Visibility
 							</h3>
@@ -176,7 +176,7 @@ export const HeroForm = ({ initialData, locale }: Props) => {
 						<VisualAssetsSection form={form} />
 
 						{/* Language Selection */}
-						<div className='bg-white dark:bg-zinc-950 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 space-y-4'>
+						<div className='bg-white dark:bg-zinc-950 p-6 rounded-4xl border border-zinc-200 dark:border-zinc-800 space-y-4'>
 							<div className='flex items-center gap-2'>
 								<Languages size={18} className='text-zinc-400' />
 								<h3 className='text-sm font-bold uppercase tracking-wider'>
@@ -231,6 +231,11 @@ export const HeroForm = ({ initialData, locale }: Props) => {
 													🔵 Open for Work
 												</SelectItem>
 												<SelectItem value='ON_LEAVE'>🔴 On Leave</SelectItem>
+												<SelectItem value='UNAVAILABLE'>
+													⚫ Unavailable
+												</SelectItem>
+												<SelectItem value='CLOSED'>⚪ Closed</SelectItem>
+												<SelectItem value='OTHER'>🟣 Other</SelectItem>
 											</SelectContent>
 										</Select>
 									)}

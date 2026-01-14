@@ -1,15 +1,16 @@
 /** @format */
 "use client";
 
-import { use, useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo } from "react";
 import {
+	useForm,
+	useFieldArray,
 	Control,
 	FieldPath,
 	FieldValues,
-	useFieldArray,
-	useForm,
 	UseFormReturn,
 } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
 	Plus,
 	Loader2,
@@ -17,13 +18,15 @@ import {
 	Settings,
 	Cpu,
 	ImagePlus,
-	Link,
+	Link as LinkIcon,
 	FileText,
 	LayoutGrid,
 	Trash2,
 	X,
 } from "lucide-react";
 import { Locale, ProjectCategory } from "@prisma/client";
+import Image from "next/image";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormLabel } from "@/components/ui/form";
@@ -38,20 +41,17 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 import { FormFieldWrapper } from "@/components/input-form-wrapper";
 import {
 	ProjectFormValues,
 	ProjectSchema,
 } from "@/server/validations/project-validation";
-import { Switch } from "@/components/ui/switch";
 import { UploadButton } from "@/utils/uploadthing";
-import { toast } from "sonner";
-import Image from "next/image";
 import { TransformedProject } from "@/types/project-types";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { IconPicker } from "@/components/icon-picker";
-import { Separator } from "@/components/ui/separator";
 import { useIsMounted } from "@/app/hooks/is-mounted";
 import { RichTextEditor } from "@/components/tiptap/rich-text-editor";
 
@@ -61,7 +61,28 @@ interface ProjectFormProps {
 	availableTechniques: { id: string; name: string }[];
 	selectedProject: TransformedProject | null;
 	onSubmit: (values: ProjectFormValues) => Promise<void>;
+	isExternalPending: boolean;
 }
+
+const getEmptyValues = (locale: Locale): ProjectFormValues => ({
+	id: null,
+	slug: "",
+	title: "",
+	description: "",
+	content: "",
+	locale,
+	mainImage: "",
+	category: ProjectCategory.WEB_DEVELOPMENT,
+	tagIds: [],
+	techniqueIds: [],
+	newTags: [],
+	newTechniques: [],
+	isFeatured: false,
+	isActive: true,
+	gallery: [],
+	liveUrl: "",
+	repoUrl: "",
+});
 
 export function ProjectForm({
 	locale,
@@ -69,33 +90,30 @@ export function ProjectForm({
 	availableTechniques,
 	selectedProject,
 	onSubmit,
+	isExternalPending,
 }: ProjectFormProps) {
-	const [isPending, startTransition] = useTransition();
 	const mounted = useIsMounted();
+
+	const defaultValues = useMemo(() => {
+		if (selectedProject) {
+			return {
+				...selectedProject,
+				content: selectedProject.content || "",
+				tagIds: selectedProject.tags.map((t) => t.id),
+				techniqueIds: selectedProject.techniques.map((t) => t.id),
+				newTags: [],
+				newTechniques: [],
+			};
+		}
+		return getEmptyValues(locale);
+	}, [selectedProject, locale]);
+
 	const form = useForm<ProjectFormValues>({
 		resolver: zodResolver(ProjectSchema) as never,
-		defaultValues: {
-			id: null,
-			slug: "",
-			mainImage: "",
-			gallery: [],
-			category: ProjectCategory.WEB_DEVELOPMENT,
-			liveUrl: "",
-			repoUrl: "",
-			isFeatured: false,
-			isActive: true,
-			locale,
-			title: "",
-			description: "",
-			content: "",
-			tagIds: [],
-			techniqueIds: [],
-			newTags: [], // For manual entry
-			newTechniques: [], // For manual entry
-		},
+		defaultValues: defaultValues as ProjectFormValues,
+		// mode: "onChange",
 	});
 
-	// field arrays for dynamic "Add New" inputs
 	const {
 		fields: tagFields,
 		append: appendTag,
@@ -114,56 +132,27 @@ export function ProjectForm({
 		name: "newTechniques",
 	});
 
-	// Handle initial data load or reset
 	useEffect(() => {
-		if (selectedProject) {
-			form.reset({
-				...selectedProject,
-				id: selectedProject.id,
-				liveUrl: selectedProject.liveUrl ?? "",
-				repoUrl: selectedProject.repoUrl ?? "",
-				content: selectedProject.content ?? "",
-				tagIds: selectedProject.tags.map((t) => t.id),
-				techniqueIds: selectedProject.techniques.map((t) => t.id),
-				newTags: [],
-				newTechniques: [],
-			});
-		} else {
-			form.reset({
-				id: null,
-				locale,
-				slug: "",
-				title: "",
-				description: "",
-				mainImage: "",
-				category: ProjectCategory.WEB_DEVELOPMENT,
-				tagIds: [],
-				techniqueIds: [],
-				newTags: [],
-				newTechniques: [],
-			});
-		}
-	}, [selectedProject, form, locale]);
+		form.reset(defaultValues as ProjectFormValues);
+	}, [defaultValues, form]);
 
 	const handleFormSubmit = async (values: ProjectFormValues) => {
-		console.log("handleFormSubmit ", values);
-
-		startTransition(async () => {
-			try {
-				await onSubmit(values);
-				// Optionally reset the "new" fields only after success
+		try {
+			await onSubmit(values);
+			if (!values.id) {
+				form.reset(getEmptyValues(locale));
+			} else {
 				form.setValue("newTags", []);
 				form.setValue("newTechniques", []);
-			} catch (error) {
-				console.error("Submission failed", error);
 			}
-		});
+		} catch (error) {
+			console.error("Submission Error:", error);
+		}
 	};
-	if (!mounted) {
-		// Return a skeleton or null to ensure server and
-		// initial client render match (both empty)
-		return <div className='h-125 animate-pulse bg-muted' />;
-	}
+
+	if (!mounted)
+		return <div className='h-96 animate-pulse bg-muted rounded-xl' />;
+
 	return (
 		<Form {...form}>
 			<form
@@ -171,21 +160,31 @@ export function ProjectForm({
 				className='space-y-6'>
 				<Tabs defaultValue='general' className='w-full'>
 					<TabsList className='grid w-full grid-cols-5 mb-8'>
-						<TabsTrigger value='general'>
-							<Settings className='w-4 h-4 mr-2' /> Basic
-						</TabsTrigger>
-						<TabsTrigger value='techniques'>
-							<Cpu className='w-4 h-4 mr-2' /> Tech
-						</TabsTrigger>
-						<TabsTrigger value='media'>
-							<ImagePlus className='w-4 h-4 mr-2' /> Media
-						</TabsTrigger>
-						<TabsTrigger value='links'>
-							<Link className='w-4 h-4 mr-2' /> Links
-						</TabsTrigger>
-						<TabsTrigger value='content'>
-							<FileText className='w-4 h-4 mr-2' /> Story
-						</TabsTrigger>
+						<TabTriggerItem
+							value='general'
+							icon={<Settings className='w-4 h-4' />}
+							label='Basic'
+						/>
+						<TabTriggerItem
+							value='techniques'
+							icon={<Cpu className='w-4 h-4' />}
+							label='Tech'
+						/>
+						<TabTriggerItem
+							value='media'
+							icon={<ImagePlus className='w-4 h-4' />}
+							label='Media'
+						/>
+						<TabTriggerItem
+							value='links'
+							icon={<LinkIcon className='w-4 h-4' />}
+							label='Links'
+						/>
+						<TabTriggerItem
+							value='content'
+							icon={<FileText className='w-4 h-4' />}
+							label='Story'
+						/>
 					</TabsList>
 
 					<TabsContent value='general' className='space-y-4'>
@@ -203,7 +202,7 @@ export function ProjectForm({
 								{(field) => <Input placeholder='my-project-url' {...field} />}
 							</FormFieldWrapper>
 						</div>
-						{/* Category Select */}
+
 						<FormFieldWrapper
 							control={form.control}
 							name='category'
@@ -223,13 +222,13 @@ export function ProjectForm({
 								</Select>
 							)}
 						</FormFieldWrapper>
+
 						<div className='grid grid-cols-2 gap-4'>
 							<StatusToggle
 								control={form.control}
 								name='isFeatured'
 								label='Featured'
 							/>
-
 							<StatusToggle
 								control={form.control}
 								name='isActive'
@@ -239,13 +238,12 @@ export function ProjectForm({
 					</TabsContent>
 
 					<TabsContent value='techniques' className='space-y-8'>
-						{/* TAGS SECTION */}
 						<section className='space-y-4'>
 							<div className='flex items-center justify-between'>
 								<div>
 									<h3 className='text-lg font-medium'>Tags</h3>
 									<p className='text-sm text-muted-foreground'>
-										Select from previous tags or create a new one.
+										Select existing or create new.
 									</p>
 								</div>
 								<Button
@@ -257,24 +255,22 @@ export function ProjectForm({
 								</Button>
 							</div>
 
-							{/* Pick Existing Tags (updates tagIds) */}
 							<div className='flex flex-wrap gap-2 p-3 border rounded-2xl bg-muted/5'>
 								{availableTags.map((tag) => {
-									const isSelected = form.watch("tagIds").includes(tag.id);
+									const tagIds = form.watch("tagIds");
+									const isSelected = tagIds.includes(tag.id);
 									return (
 										<Badge
 											key={tag.id}
 											variant={isSelected ? "default" : "outline"}
 											className='cursor-pointer transition-all hover:bg-primary/10'
 											onClick={() => {
-												const current = form.getValues("tagIds");
-												form.setValue(
-													"tagIds",
-													isSelected
-														? current.filter((id) => id !== tag.id)
-														: [...current, tag.id],
-													{ shouldDirty: true },
-												);
+												const nextValue = isSelected
+													? tagIds.filter((id) => id !== tag.id)
+													: [...tagIds, tag.id];
+												form.setValue("tagIds", nextValue, {
+													shouldDirty: true,
+												});
 											}}>
 											{tag.name}
 										</Badge>
@@ -282,31 +278,24 @@ export function ProjectForm({
 								})}
 							</div>
 
-							{/* Input Fields for New Tags (updates newTags) */}
 							<div className='flex flex-wrap gap-2'>
 								{tagFields.map((field, index) => (
 									<div
 										key={field.id}
-										className='flex items-center gap-1 p-1 pl-3 rounded-full border bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'>
+										className='flex items-center gap-1 p-1 pl-3 rounded-full border bg-background focus-within:ring-2 focus-within:ring-ring'>
 										<span className='text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full'>
 											NEW
 										</span>
-										<FormField
-											control={form.control}
-											name={`newTags.${index}.name`} // Updated name to match schema
-											render={({ field }) => (
-												<input
-													{...field}
-													placeholder='Tag name...'
-													className='bg-transparent border-none text-sm outline-none w-28'
-												/>
-											)}
+										<input
+											{...form.register(`newTags.${index}.name`)}
+											placeholder='Tag name...'
+											className='bg-transparent border-none text-sm outline-none w-28'
 										/>
 										<Button
 											type='button'
 											variant='ghost'
 											size='icon'
-											className='h-6 w-6 rounded-full hover:text-destructive'
+											className='h-6 w-6 rounded-full'
 											onClick={() => removeTag(index)}>
 											<X className='w-3 h-3' />
 										</Button>
@@ -317,15 +306,9 @@ export function ProjectForm({
 
 						<Separator />
 
-						{/* TECHNIQUES SECTION */}
 						<section className='space-y-4'>
 							<div className='flex items-center justify-between'>
-								<div>
-									<h3 className='text-lg font-medium'>Techniques & Skills</h3>
-									<p className='text-sm text-muted-foreground'>
-										Highlight the specific tools used in this project.
-									</p>
-								</div>
+								<h3 className='text-lg font-medium'>Techniques & Skills</h3>
 								<Button
 									type='button'
 									variant='outline'
@@ -335,61 +318,45 @@ export function ProjectForm({
 								</Button>
 							</div>
 
-							{/* Pick Existing Techniques (updates techniqueIds) */}
-							<div className='space-y-2'>
-								<label className='text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2'>
-									<LayoutGrid className='w-3 h-3' /> Quick Select
-								</label>
-								<div className='flex flex-wrap gap-2 p-3 border rounded-2xl bg-muted/5'>
-									{availableTechniques.map((tech) => {
-										const isSelected = form
-											.watch("techniqueIds")
-											.includes(tech.id);
-										return (
-											<Badge
-												key={tech.id}
-												variant={isSelected ? "secondary" : "outline"}
-												className='cursor-pointer'
-												onClick={() => {
-													const current = form.getValues("techniqueIds");
-													form.setValue(
-														"techniqueIds",
-														isSelected
-															? current.filter((id) => id !== tech.id)
-															: [...current, tech.id],
-														{ shouldDirty: true },
-													);
-												}}>
-												{tech.name}
-											</Badge>
-										);
-									})}
-								</div>
+							<div className='flex flex-wrap gap-2 p-3 border rounded-2xl bg-muted/5'>
+								{availableTechniques.map((tech) => {
+									const techIds = form.watch("techniqueIds");
+									const isSelected = techIds.includes(tech.id);
+									return (
+										<Badge
+											key={tech.id}
+											variant={isSelected ? "secondary" : "outline"}
+											className='cursor-pointer'
+											onClick={() => {
+												const nextValue = isSelected
+													? techIds.filter((id) => id !== tech.id)
+													: [...techIds, tech.id];
+												form.setValue("techniqueIds", nextValue, {
+													shouldDirty: true,
+												});
+											}}>
+											{tech.name}
+										</Badge>
+									);
+								})}
 							</div>
 
-							{/* Dynamic List for New Techniques (updates newTechniques) */}
 							<div className='grid grid-cols-1 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar'>
 								{techFields.map((field, index) => (
 									<div
 										key={field.id}
-										className='flex items-center gap-3 p-3 border rounded-xl bg-zinc-50 dark:bg-zinc-900/50 group transition-colors hover:border-primary/50'>
+										className='flex items-center gap-3 p-3 border rounded-xl bg-zinc-50 dark:bg-zinc-900/50 group'>
 										<div className='flex-1'>
-											<FormField
-												control={form.control}
-												name={`newTechniques.${index}.name`} // Updated name to match schema
-												render={({ field }) => (
-													<Input
-														{...field}
-														placeholder='Skill name (e.g. Tailwind CSS)'
-														className='h-9 bg-background'
-													/>
-												)}
+											<Input
+												{...form.register(`newTechniques.${index}.name`)}
+												placeholder='Skill name'
+												className='h-9'
 											/>
 										</div>
 										<div className='w-32'>
 											<FormField
 												control={form.control}
-												name={`newTechniques.${index}.icon`} // Updated name to match schema
+												name={`newTechniques.${index}.icon`}
 												render={({ field }) => (
 													<IconPicker
 														value={field.value || "Code"}
@@ -402,7 +369,6 @@ export function ProjectForm({
 											type='button'
 											variant='ghost'
 											size='icon'
-											className='text-muted-foreground hover:text-destructive'
 											onClick={() => removeTech(index)}>
 											<Trash2 className='w-4 h-4' />
 										</Button>
@@ -411,10 +377,11 @@ export function ProjectForm({
 							</div>
 						</section>
 					</TabsContent>
+
 					<TabsContent value='media' className='space-y-6'>
 						<ImageUploaders form={form} />
 					</TabsContent>
-					<Separator />
+
 					<TabsContent value='links' className='space-y-4'>
 						<FormFieldWrapper
 							control={form.control}
@@ -445,28 +412,23 @@ export function ProjectForm({
 								<RichTextEditor value={field.value} onChange={field.onChange} />
 							)}
 						</FormFieldWrapper>
-						{/* <FormFieldWrapper
-							control={form.control}
-							name='content'
-							label='Detailed Story (Markdown)'>
-							{(field) => (
-								<Textarea rows={8} {...field} value={field.value ?? ""} />
-							)}
-						</FormFieldWrapper> */}
 					</TabsContent>
-					{/* Additional TabsContent for media, links, content... */}
 				</Tabs>
 
 				<Button
-					disabled={isPending}
+					disabled={isExternalPending}
 					type='submit'
 					className='w-full rounded-xl h-12'>
-					{isPending ? (
+					{isExternalPending ? (
 						<Loader2 className='animate-spin' />
 					) : (
 						<Save className='mr-2 w-4 h-4' />
 					)}
-					{selectedProject ? "Update Project" : "Create Project"}
+					{isExternalPending
+						? "Saving..."
+						: selectedProject
+						? "Update Project"
+						: "Create Project"}
 				</Button>
 			</form>
 		</Form>
@@ -534,10 +496,9 @@ function ImageUploaders({ form }: { form: UseFormReturn<ProjectFormValues> }) {
 						<div className='relative aspect-video w-full max-w-sm rounded-xl overflow-hidden border shadow-lg group'>
 							<Image
 								src={image}
-								width={1920}
-								height={1080}
-								unoptimized // <--- Add this!
-								className='w-full h-full object-cover'
+								fill
+								unoptimized
+								className='object-cover'
 								alt='Cover'
 							/>
 							<Button
@@ -571,10 +532,9 @@ function ImageUploaders({ form }: { form: UseFormReturn<ProjectFormValues> }) {
 								className='relative aspect-square rounded-xl overflow-hidden border group'>
 								<Image
 									src={url}
-									width={1920}
-									height={1080}
-									unoptimized // <--- Add this!
-									className='w-full h-full object-cover'
+									fill
+									unoptimized
+									className='object-cover'
 									alt='Gallery'
 								/>
 								<button
@@ -585,7 +545,7 @@ function ImageUploaders({ form }: { form: UseFormReturn<ProjectFormValues> }) {
 											gallery.filter((_, i) => i !== idx),
 										)
 									}
-									className='absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity'>
+									className='absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100'>
 									<X size={12} />
 								</button>
 							</div>

@@ -20,6 +20,7 @@ import { contactFormSchema } from "@/server/validations/contact";
 import { z } from "zod";
 import { sendContactMessage } from "@/server/actions/contact";
 import { cn } from "@/lib/utils";
+import { BackgroundRippleEffect } from "../background-ripple-effect";
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 

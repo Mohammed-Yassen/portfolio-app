@@ -28,7 +28,7 @@ export const getHeroData = unstable_cache(
 		return {
 			id: hero.id,
 			primaryImage: hero.primaryImage,
-			resumeUrl: hero.resumeUrl,
+			resumeUrl: hero.translations[0]?.resumeUrl,
 			availability: hero.availability,
 			updatedAt: hero.updatedAt,
 			isActive: hero.isActive,

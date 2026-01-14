@@ -4,12 +4,14 @@
 import React, { useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
+
 import { registerAction } from "@/server/actions/auth-actions";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-
 import {
 	PasswordInput,
 	FormError,
@@ -18,10 +20,10 @@ import {
 } from "./auth-components";
 import { AuthContainer } from "./auth-container";
 import { FormFieldWrapper } from "../input-form-wrapper";
-import Link from "next/link";
 import { RegisterFormValues, registerSchema } from "@/server/validations/auth";
 
 export const SignUpForm = () => {
+	const t = useTranslations("Auth");
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState<string | undefined>("");
 	const [success, setSuccess] = useState<string | undefined>("");
@@ -32,7 +34,6 @@ export const SignUpForm = () => {
 			name: "",
 			email: "",
 			password: "",
-			// This tells TS: "I know it starts as false, but treat it as the literal type"
 			acceptedTerms: false as unknown as true,
 		},
 	});
@@ -43,18 +44,20 @@ export const SignUpForm = () => {
 
 		startTransition(() => {
 			registerAction(values).then((data) => {
-				setError(data?.error);
-				setSuccess(data?.success);
-				if (data?.success) form.reset(); // Clear form on success
+				if (data?.error) setError(t("errors.registrationFailed"));
+				if (data?.success) {
+					setSuccess(t("success.accountCreated"));
+					form.reset();
+				}
 			});
 		});
 	};
 
 	return (
 		<AuthContainer
-			headerLabel='Create an account'
-			description='Enter your details to get started'
-			backButtonLabel='Already have an account?'
+			headerLabel={t("createAccount")}
+			description={t("getStartedDetails")}
+			backButtonLabel={t("alreadyHaveAccount")}
 			backButtonHref='/auth/sign-in'
 			showSocial>
 			<Form {...form}>
@@ -63,7 +66,7 @@ export const SignUpForm = () => {
 						<FormFieldWrapper
 							control={form.control}
 							name='name'
-							label='Full Name'
+							label={t("fullNameLabel")}
 							disabled={isPending}>
 							{(field) => (
 								<Input {...field} placeholder='John Doe' autoComplete='name' />
@@ -73,12 +76,12 @@ export const SignUpForm = () => {
 						<FormFieldWrapper
 							control={form.control}
 							name='email'
-							label='Email Address'
+							label={t("emailLabel")}
 							disabled={isPending}>
 							{(field) => (
 								<Input
 									{...field}
-									placeholder='john@example.com'
+									placeholder='email@example.com'
 									type='email'
 									autoComplete='email'
 								/>
@@ -88,7 +91,7 @@ export const SignUpForm = () => {
 						<FormFieldWrapper
 							control={form.control}
 							name='password'
-							label='Password'
+							label={t("passwordLabel")}
 							disabled={isPending}>
 							{(field) => (
 								<PasswordInput
@@ -98,6 +101,7 @@ export const SignUpForm = () => {
 								/>
 							)}
 						</FormFieldWrapper>
+
 						<FormFieldWrapper control={form.control} name='acceptedTerms'>
 							{(field) => (
 								<FormCheckboxWrapper
@@ -105,14 +109,12 @@ export const SignUpForm = () => {
 									value={field.value}
 									onChange={field.onChange}
 									label={
-										<span>
-											I accept the{" "}
-											<Link href='/terms' className='text-primary underline'>
-												Terms
-											</Link>{" "}
-											and{" "}
-											<Link href='/privacy' className='text-primary underline'>
-												Privacy Policy
+										<span className='text-sm'>
+											{t("acceptTerms")}{" "}
+											<Link
+												href='/terms'
+												className='text-primary hover:underline font-medium'>
+												{t("termsLink")}
 											</Link>
 										</span>
 									}
@@ -128,7 +130,7 @@ export const SignUpForm = () => {
 						{isPending ? (
 							<Loader2 className='mr-2 h-4 w-4 animate-spin' />
 						) : (
-							"Create account"
+							t("signUpSubmit")
 						)}
 					</Button>
 				</form>

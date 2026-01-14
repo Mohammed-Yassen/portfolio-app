@@ -49,7 +49,6 @@ import {
 	updateTestimonialStatus,
 	deleteTestimonial,
 } from "@/server/actions/testimonial";
-
 interface TestimonialTableProps {
 	data: Testimonial[];
 	locale: string;
@@ -66,30 +65,38 @@ export function TestimonialTable({ data, locale }: TestimonialTableProps) {
 	const t = useTranslations("AdminTestimonials");
 	const [isPending, startTransition] = useTransition();
 	const [selectedItem, setSelectedItem] = useState<Testimonial | null>(null);
-	const isRtl = locale === "ar";
 
 	const handleAction = (
 		id: string,
 		action: ActionType,
 		payload?: ActionPayload,
 	) => {
+		// Confirmation for delete
 		if (action === "delete" && !confirm(t("confirmDelete"))) return;
 
 		startTransition(async () => {
 			let result;
+
 			if (action === "delete") {
-				result = await deleteTestimonial(id);
+				// Pass as object: { id: "..." }
+				result = await deleteTestimonial({ id });
 			} else if (payload) {
-				result = await updateTestimonialStatus(id, {
+				// Pass everything in one object to match the Zod schema
+				result = await updateTestimonialStatus({
+					id,
 					[payload.field]: !payload.currentVal,
 				});
 			}
 
-			if (result?.success) toast.success(t("actionSuccess"));
-			else toast.error(result?.error || t("actionError"));
+			if (result?.success) {
+				toast.success(t("actionSuccess"));
+			} else {
+				toast.error(result?.error || t("actionError"));
+			}
 		});
 	};
 
+	const isRtl = locale === "ar";
 	return (
 		<div className='w-full overflow-auto border rounded-lg'>
 			<Table>

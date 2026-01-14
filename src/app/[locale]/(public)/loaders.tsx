@@ -1,8 +1,9 @@
 /** @format */
-import { Locale } from "@prisma/client";
+import { Locale, SocialLinks } from "@prisma/client";
 import { AlertCircle } from "lucide-react";
 import {
 	getAboutData,
+	getCertifications,
 	getEducations,
 	getExperiences,
 	getHeroData,
@@ -34,17 +35,22 @@ import { getBlogs } from "@/server/data/blogs";
 import BlogSection from "@/components/sections/blog-section";
 import { getPublicTestimonials } from "@/server/data/testimonial";
 import { TestimonialsSection } from "@/components/sections/testimonials-section";
+import { getAdminSocialLinks, getUserWithProfile } from "@/server/data/users";
+import { Footer } from "@/components/sections/footer";
+import { CertificationsSection } from "@/components/sections/certification-section";
 
 export async function HeroLoader({ locale }: { locale: Locale }) {
-	const data = (await getHeroData(locale)) as HeroData;
+	const [data, socialLinks] = await Promise.all([
+		getHeroData(locale) as Promise<HeroData | null>,
+		getAdminSocialLinks() as Promise<SocialLinks[] | null>,
+	]);
 	if (!data) {
-		// نعرض الخطأ فقط في بيئة التطوير، وفي الإنتاج لا نعرض شيئاً للحفاظ على شكل الصفحة
 		return process.env.NODE_ENV === "development" ? (
 			<ErrorBox section='Hero' />
 		) : null;
 	}
 
-	return <HeroSection data={data} locale={locale} />;
+	return <HeroSection data={data} socialLinks={socialLinks} locale={locale} />;
 }
 export async function AboutLoader({ locale }: { locale: Locale }) {
 	const data = (await getAboutData(locale)) as AboutData | null;
@@ -86,4 +92,14 @@ export async function TestimonialsLoader({ locale }: { locale: Locale }) {
 	const data = await getPublicTestimonials();
 	if (!data) return null;
 	return <TestimonialsSection data={data} locale={locale} />;
+}
+export async function FooterLoader({ locale }: { locale: Locale }) {
+	const socialLinks = await getAdminSocialLinks();
+	if (!socialLinks) return null;
+	return <Footer socialLinks={null} locale={locale} />;
+}
+export async function CertificationLoader({ locale }: { locale: Locale }) {
+	const data = await getCertifications(locale);
+	if (!data) return null;
+	return <CertificationsSection certifications={data} locale={locale} />;
 }

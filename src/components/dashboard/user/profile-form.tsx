@@ -29,6 +29,7 @@ import { UploadButton } from "@/utils/uploadthing";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { UserRole } from "@prisma/client";
 
 interface ProfileFormProps {
 	initialData: UserWithProfile;
@@ -43,16 +44,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 		defaultValues: {
 			name: initialData.name ?? "",
 			phone: initialData?.profile?.phone ?? "",
-			role: initialData.role,
+			role: initialData.role as UserRole,
 			image: initialData.image ?? "",
 			professionalEmail: initialData.profile?.professionalEmail ?? "",
 			resumeUrl: initialData.profile?.resumeUrl ?? "",
 			location: defaultTranslation?.location ?? "",
 			bio: defaultTranslation?.bio ?? "",
 			socials:
-				initialData.profile?.socials?.map((s) => ({
-					name: s.name,
-					url: s.url,
+				initialData?.profile?.socials?.map((s) => ({
+					name: s.name ?? "",
+					url: s.url ?? "",
 					icon: s.icon ?? "",
 				})) ?? [],
 		},
@@ -144,6 +145,23 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 												<FormControl>
 													<Input
 														placeholder='City, Country'
+														{...field}
+														value={field.value ?? ""}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name='bio'
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Bio</FormLabel>
+												<FormControl>
+													<Input
+														placeholder='Enter your bio here'
 														{...field}
 														value={field.value ?? ""}
 													/>
@@ -287,6 +305,7 @@ function VisualAssetsSection({
 								alt='Avatar Preview'
 								width={1600}
 								height={1600}
+								unoptimized // <--- Add this!
 								priority
 								className='w-32 h-32 object-cover rounded-full shadow-md border-4 border-background'
 							/>

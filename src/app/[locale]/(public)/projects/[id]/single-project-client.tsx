@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { TransformedProject } from "@/types/project-types";
 import { Locale } from "@prisma/client";
+import { EditorContent } from "@/components/editor-content";
 
 interface Props {
 	project: TransformedProject;
@@ -119,9 +120,12 @@ export function SingleProjectClient({ project, locale }: Props) {
 							className={`prose prose-invert prose-primary max-w-none ${
 								isAr ? "text-right" : "text-left"
 							}`}>
-							<ReactMarkdown remarkPlugins={[remarkGfm]}>
+							<div className='mt-10'>
+								<EditorContent content={project.content} />
+							</div>
+							{/* <ReactMarkdown remarkPlugins={[remarkGfm]}>
 								{project.content || content.demo}
-							</ReactMarkdown>
+							</ReactMarkdown> */}
 						</article>
 					</section>
 

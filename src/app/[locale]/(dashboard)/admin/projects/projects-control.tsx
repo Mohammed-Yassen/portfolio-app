@@ -26,7 +26,6 @@ interface Props {
 	availableTags: { id: string; name: string }[];
 	availableTechniques: { id: string; name: string }[];
 }
-
 export const ProjectFormContainer = ({
 	initialData,
 	locale,
@@ -37,47 +36,40 @@ export const ProjectFormContainer = ({
 	const [selectedProject, setSelectedProject] =
 		useState<TransformedProject | null>(null);
 	const [isPending, startTransition] = useTransition();
+	console.log({ selectedProject });
 
-	/**
-	 * Handles both Create and Update logic
-	 */
 	const handleOnSubmit = async (values: ProjectFormValues) => {
-		console.log("values Create and Update logic ", values);
-		startTransition(async () => {
-			const promise = values.id
-				? updateProjectAction(values.id, values)
-				: createProjectAction(values);
+		return new Promise<void>((resolve, reject) => {
+			startTransition(async () => {
+				const res = values.id
+					? await updateProjectAction(values.id, values)
+					: await createProjectAction(values);
 
-			toast.promise(promise, {
-				loading: values.id ? "Updating project..." : "Creating project...",
-				success: (res) => {
-					if (!res.success) throw new Error(res.error);
-
+				if (res.success) {
+					toast.success(
+						values.id
+							? "Project updated successfully"
+							: "Project created successfully",
+					);
 					setSelectedProject(null);
 					router.refresh();
-					return values.id ? "Project updated!" : "Project created!";
-				},
-				error: (err) => err.message || "Something went wrong",
+					resolve();
+				} else {
+					toast.error(res.error || "Action failed");
+				}
 			});
 		});
 	};
 
-	/**
-	 * Handles Deletion with a confirm check
-	 */
 	const handleDelete = async (id: string) => {
-		if (!confirm("Are you sure you want to delete this project?")) return;
-
+		if (!confirm("Are you sure?")) return;
 		startTransition(async () => {
-			const result = await deleteProjectAction(id);
-
-			if (result.success) {
-				toast.success("Project deleted successfully");
+			const res = await deleteProjectAction(id);
+			if (res.success) {
+				toast.success("Project deleted");
 				if (selectedProject?.id === id) setSelectedProject(null);
 				router.refresh();
-			} else {
-				toast.error(result.error || "Failed to delete");
-			}
+			} else toast.error(res.error);
 		});
 	};
 
@@ -109,8 +101,8 @@ export const ProjectFormContainer = ({
 							availableTechniques={availableTechniques}
 							selectedProject={selectedProject}
 							onSubmit={handleOnSubmit}
+							isExternalPending={isPending}
 						/>
-
 						{selectedProject && (
 							<Button
 								variant='outline'
@@ -123,7 +115,9 @@ export const ProjectFormContainer = ({
 					</CardContent>
 				</Card>
 			</div>
-
+			{/* y_aseen
+Y&q%sGm*82a5GJ-#:
+*/}
 			{/* RIGHT SIDE: LIST */}
 			<div className='lg:col-span-12 space-y-4'>
 				<div className='flex items-center justify-between px-2'>

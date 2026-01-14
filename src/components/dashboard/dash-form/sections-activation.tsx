@@ -21,9 +21,9 @@ import {
 	Sparkles,
 	Briefcase,
 } from "lucide-react";
-import { updateSectionStatus } from "@/server/actions/setting";
 import { Locale, SectionActive } from "@prisma/client";
 import { SectionActiveValues } from "@/server/validations";
+import { updateSectionStatusAction } from "@/server/actions/setting";
 
 /**
  * Extract only the boolean toggle keys from the SectionActive model,
@@ -60,9 +60,9 @@ export function SectionActivationClient({
 
 		startTransition(async () => {
 			// Send the full validated object to the server
-			const res = await updateSectionStatus(updatedConfig);
+			const res = await updateSectionStatusAction(updatedConfig);
 
-			if (res.error) {
+			if (!res.success) {
 				toast.error(res.error);
 				// Rollback to initial server config on failure
 				setOptimisticConfig(config as never);

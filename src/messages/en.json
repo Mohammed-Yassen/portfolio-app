@@ -33,7 +33,7 @@
     "badge": "Available for new projects",
     "titleStart": "Get In",
     "titleEnd": "Touch",
-    "description": "Have a complex research problem or a SaaS idea? Let’s build something {innovative} together.",
+    "description": "Have a complex research problem or a SaaS idea? Let’s build something innovative together.",
     "quote": "Design is not just what it looks like. Design is how it works.",
     "labelName": "Name",
     "labelEmail": "Email",
@@ -47,6 +47,13 @@
     "btnSending": "Sending...",
     "success": "Message sent successfully! I'll be in touch.",
     "error": "Something went wrong. Please try again."
+  },"Blog": {
+    "archive": "Archive",
+    "articlesCount": "Articles",
+    "badge": "Digital Journal",
+    "titlePart1": "Writing",
+    "titlePart2": "Insights",
+    "description": "Explorations into modern web development, architectural patterns, and the future of creative technology."
   },
   "sidebar": {
     "mode": "Mode",
@@ -211,5 +218,90 @@
       "seo": "SEO metadata helps search engines. If empty, title and excerpt are used.",
       "imageSize": "Recommended size: 1200x630px"
     }
+},
+  "Auth": {
+    "signInTitle": "Sign In",
+    "signInDescription": "Enter your credentials",
+    "signUpTitle": "Sign Up",
+    "signUpDescription": "Create your account",
+    "welcomeBack": "Welcome back",
+    "enterCredentials": "Enter your credentials to access your account",
+    "createAccount": "Create an account",
+    "getStartedDetails": "Enter your details to get started",
+    "noAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "emailLabel": "Email Address",
+    "passwordLabel": "Password",
+    "fullNameLabel": "Full Name",
+    "submitButton": "Sign In",
+    "signUpSubmit": "Create Account",
+    "acceptTerms": "I accept the",
+    "termsLink": "Terms & Conditions",
+    "success": {
+      "loggedIn": "Logged in successfully!",
+      "accountCreated": "Account created! You can now sign in."
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password.",
+      "registrationFailed": "Could not create account. Please try again."
+    }
+  },"Footer": {
+    "description": "Crafting high-performance digital experiences with a focus on modern architecture and user-centric design.",
+    "nav_title": "Navigation",
+    "home": "Home",
+    "projects": "Projects",
+    "blog": "Blog",
+    "about": "About",
+    "newsletter_title": "Drop a message",
+    "newsletter_desc": "Interested in working together? Let's build something great.",
+    "back_to_top": "Back to Top",
+    "rights": "ALL RIGHTS RESERVED",
+    "privacy": "PRIVACY POLICY",
+    "terms": "TERMS OF SERVICE"
+  },
+  "Common":{
+    "backToHome": "Back to Home"
+
+  },
+   "SkillsSection": {
+    "badge": "Technical Stack",
+    "titleStart": "Core",
+    "titleEnd": "Expertise",
+    "description": "Engineering solutions with a focus on modern architectures, scalability, and high-performance execution.",
+    "techCount": "Technologies",
+    "mastery": {
+      "expert": "Expert",
+      "advanced": "Advanced",
+      "proficient": "Proficient"
+    }
+  },
+  "ProjectsSection": {
+    "badge": "Portfolio",
+    "titleStart": "Featured",
+    "titleEnd": "Projects",
+    "description": "A collection of systems bridging the gap between theoretical research and scalable engineering.",
+    "totalProjects": "Total Projects",
+    "viewAll": "Explore All Works",
+    "footerText": "Discover more technical solutions"
+  },
+  "ProjectCard": {
+    "viewProject": "View Project",
+    "githubRepo": "Source Code",
+    "liveDemo": "Live Demo",
+    "techStack": "Technologies Used",
+    "featured": "Featured Case Study"
+  },
+  "ExperienceSection": {
+    "experienceTitle": "Experience",
+    "educationTitle": "Education",
+    "present": "Present"
+  },
+  "CertificationsSection": {
+    "title": "Professional Credentials",
+    "subtitle": "Industry-recognized certifications and verified expertise in modern engineering.",
+    "verified": "Verified",
+    "credentialId": "Credential ID",
+    "viewLink": "Verify Certificate"
 }
+
 }

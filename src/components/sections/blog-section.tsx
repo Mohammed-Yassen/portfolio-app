@@ -7,6 +7,7 @@ import { TransformedBlog } from "@/types/blog-types";
 import { Locale } from "@prisma/client";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { BackgroundRippleEffect } from "../background-ripple-effect";
 
 interface BlogSectionProps {
 	blogs: TransformedBlog[];
@@ -22,6 +23,8 @@ export default function BlogSection({ blogs, locale }: BlogSectionProps) {
 			className='py-24 relative overflow-hidden bg-background'
 			dir={isAr ? "rtl" : "ltr"}>
 			{/* Subtle background decorative element */}
+			{/* <BackgroundRippleEffect rows={16} cols={24} cellSize={56} /> */}
+
 			<div className='absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-linear-to-r from-transparent via-border to-transparent' />
 
 			<div className='container mx-auto px-6 max-w-7xl'>

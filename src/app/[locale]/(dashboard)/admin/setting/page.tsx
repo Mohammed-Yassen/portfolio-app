@@ -39,6 +39,7 @@ import { SectionActivationClient } from "@/components/dashboard/dash-form/sectio
 import { CertificationForm } from "@/components/dashboard/dash-form/certification-form";
 import { CertificationsSkeleton } from "@/components/sections/sections-skeleton";
 import { FaCertificate } from "react-icons/fa";
+import { HeroData } from "@/types";
 
 interface Props {
 	params: Promise<{ locale: string }>;
@@ -178,14 +179,12 @@ export default async function ControlPage({ params, searchParams }: Props) {
 /** * Data Fetching Components (Server Components)
  */
 async function HeroTabContent({ locale }: { locale: Locale }) {
-	const data = await getHeroData(locale);
-	if (!data) return null;
+	const data = (await getHeroData(locale)) as HeroData | null;
 	return <HeroForm initialData={data} locale={locale} />;
 }
 
 async function AboutTabContent({ locale }: { locale: Locale }) {
 	const data = await getAboutData(locale);
-	if (!data) return null;
 	return <AboutForm aboutData={data} locale={locale} />;
 }
 

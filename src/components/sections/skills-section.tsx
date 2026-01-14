@@ -1,70 +1,72 @@
 /** @format */
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Locale } from "@prisma/client";
 import { TransformedSkillCategory } from "@/types";
 import { MotionSection } from "../shared/motion-viewport";
 import { cn } from "@/lib/utils";
 import { resolveIcon } from "@/lib/icon-utils";
+import { useTranslations } from "next-intl";
 
 interface Props {
 	initialData: TransformedSkillCategory[];
 	locale: Locale;
 }
 
-const getLevelGradient = (level: number) => {
-	if (level >= 90) return "from-emerald-500 via-teal-400 to-cyan-400";
-	if (level >= 75) return "from-blue-600 via-indigo-500 to-violet-500";
-	if (level >= 50) return "from-amber-400 via-orange-500 to-rose-500";
-	return "from-slate-400 to-slate-600";
-};
-
-// logic to handle centering and columns for same-height cards
-const getGridConfig = (count: number) => {
-	if (count === 1) return "max-w-2xl grid-cols-1";
-	if (count === 2) return "max-w-5xl grid-cols-1 md:grid-cols-2";
-	// Default for 3 or more: standard 3-column grid
-	return "max-w-7xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+// Logic: Dynamic Color Mapping based on mastery
+const getSkillTheme = (level: number) => {
+	if (level >= 90)
+		return "from-emerald-400 to-cyan-500 shadow-emerald-500/20 text-emerald-500 dark:text-emerald-400";
+	if (level >= 75)
+		return "from-blue-500 to-indigo-600 shadow-blue-500/20 text-blue-600 dark:text-blue-400";
+	if (level >= 50)
+		return "from-amber-400 to-orange-500 shadow-amber-500/20 text-amber-600 dark:text-amber-400";
+	return "from-zinc-400 to-zinc-600 shadow-zinc-500/10 text-zinc-500 dark:text-zinc-400";
 };
 
 export const SkillsSection = ({ initialData, locale }: Props) => {
+	const t = useTranslations("SkillsSection");
 	const isAr = locale === "ar";
-	const gridConfig = getGridConfig(initialData.length);
 
 	return (
-		<section id='skills' className='py-24 relative overflow-hidden '>
-			{/* Dynamic Background Decoration */}
-			<div className='absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none opacity-30'>
-				<div className='absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full' />
-				<div className='absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full' />
-			</div>
+		<section
+			id='skills'
+			className='relative overflow-hidden py-24 selection:bg-primary/30 bg-background transition-colors duration-500'>
+			{/* Grid Pattern - Adaptive Opacity */}
+			<div className='absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]' />
 
-			<div className='container mx-auto px-6 relative z-10'>
-				<MotionSection preset='fadeInUp' className='mb-20 text-center'>
-					<h2
-						// dir={isAr ? "rtl" : "ltr"}
-						className='text-4xl md:text-5xl font-extrabold tracking-tight mb-4'>
-						{isAr ? "الخبرات " : "Technical "}
-						<span className='text-primary bg-clip-text bg-linear-to-r from-primary to-blue-600'>
-							{isAr ? "التقنية" : "Expertise"}
+			<div className='container relative z-10 mx-auto px-6'>
+				<MotionSection
+					preset='fadeInUp'
+					className='mb-20 flex flex-col items-center text-center'>
+					<div className='mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5'>
+						<span className='relative flex h-2 w-2'>
+							<span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75'></span>
+							<span className='relative inline-flex h-2 w-2 rounded-full bg-primary'></span>
+						</span>
+						<span className='text-[11px] font-bold uppercase tracking-widest text-primary'>
+							{t("badge")}
+						</span>
+					</div>
+
+					<h2 className='text-4xl font-extrabold tracking-tight md:text-5xl uppercase text-foreground'>
+						{t("titleStart")}{" "}
+						<span className='bg-linear-to-r from-primary to-blue-500 bg-clip-text text-transparent italic'>
+							{t("titleEnd")}
 						</span>
 					</h2>
-					<div className='h-1.5 w-24 bg-linear-to-r from-primary to-blue-600 mx-auto rounded-full mb-6' />
-					<p className='max-w-2xl mx-auto text-muted-foreground text-lg'>
-						{isAr
-							? "نظرة شاملة على مهاراتي التقنية ومستويات الإتقان في مختلف مجالات تطوير البرمجيات."
-							: "A comprehensive overview of my technical stack and proficiency levels in various domains of software development."}
+					<p className='mt-4 max-w-2xl text-muted-foreground'>
+						{t("description")}
 					</p>
 				</MotionSection>
 
 				<div
 					className={cn(
-						"grid gap-6 mx-auto transition-all duration-500 ",
-						gridConfig,
-					)}
-					dir={isAr ? "rtl" : "ltr"}>
+						"grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 items-stretch",
+						isAr ? "rtl" : "ltr",
+					)}>
 					{initialData.map((category, index) => (
 						<SkillCategoryCard
 							key={category.id}
@@ -88,74 +90,83 @@ const SkillCategoryCard = ({
 	index: number;
 	locale: Locale;
 }) => {
+	const t = useTranslations("SkillsSection");
 	const isAr = locale === "ar";
+	const cardRef = useRef<HTMLDivElement>(null);
+	const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-	// THE FIX: Use useMemo to prevent "Cannot create components during render"
-	const IconComponent = useMemo(
-		() => resolveIcon(category.icon),
-		[category.icon],
-	);
+	const IconComponent = resolveIcon(category.icon);
+
+	const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+		if (!cardRef.current) return;
+		const rect = cardRef.current.getBoundingClientRect();
+		setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+	};
 
 	return (
-		<MotionSection
-			as='div'
-			preset='scaleUp'
-			delay={index * 0.1}
-			variant='glass'
-			className='break-inside-avoid h-fit p-1 rounded-3xl transition-all duration-500 group'>
+		<motion.div
+			ref={cardRef}
+			onMouseMove={handleMouseMove}
+			initial={{ opacity: 0, y: 30 }}
+			whileInView={{ opacity: 1, y: 0 }}
+			viewport={{ once: true }}
+			transition={{ duration: 0.5, delay: index * 0.1 }}
+			className='group relative flex h-full flex-col overflow-hidden rounded-[2.5rem] border border-black/5 dark:border-white/5 bg-white/50 dark:bg-zinc-900/40 p-1 transition-all hover:border-primary/30 shadow-sm dark:shadow-none'>
+			{/* Spotlight Overlay */}
 			<div
-				dir={isAr ? "rtl" : "ltr"}
-				className='bg-card/50 dark:bg-zinc-900/50 backdrop-blur-xl p-6 rounded-[calc(1.5rem-1px)] border border-white/5 hover:border-primary/20 transition-colors h-full'>
-				{/* Category Header */}
-				<div className='flex items-center gap-4 mb-8'>
-					<div className='relative shrink-0'>
-						<div className='absolute inset-0 bg-primary/20 blur-xl rounded-full group-hover:bg-primary/40 transition-all duration-500' />
-						<div className='relative p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-inner'>
-							<IconComponent size={24} />
-						</div>
+				className='pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-500 group-hover:opacity-100'
+				style={{
+					background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(var(--primary-rgb, 59, 130, 246), 0.1), transparent 80%)`,
+				}}
+			/>
+
+			<div className='relative flex h-full flex-col rounded-[2.3rem] bg-white/80 dark:bg-zinc-950/60 p-8 backdrop-blur-xl'>
+				<div className='mb-6 flex items-center gap-4'>
+					<div className='flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-black/5 dark:border-white/10 text-primary shadow-sm group-hover:border-primary/40 transition-colors duration-500'>
+						{IconComponent && <IconComponent size={28} strokeWidth={1.5} />}
 					</div>
 					<div className='min-w-0'>
-						<h3 className='text-xl font-bold tracking-tight text-foreground/90 group-hover:text-primary transition-colors truncate'>
+						<h3 className='truncate text-xl font-bold text-foreground group-hover:text-primary transition-colors'>
 							{category.title}
 						</h3>
-						<span className='text-[10px] uppercase tracking-widest text-muted-foreground font-semibold'>
-							{category.skills.length} {isAr ? "تقنيات" : "Technologies"}
-						</span>
+						<p className='text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground'>
+							{category.skills.length} {t("techCount")}
+						</p>
 					</div>
 				</div>
 
-				{/* Skills List */}
-				<div className='space-y-6'>
+				<div className='flex grow flex-col justify-start space-y-4'>
 					{category.skills.map((skill, sIdx) => {
-						const level = skill?.level || 0;
+						const themeClasses = getSkillTheme(skill.level || 0);
+
 						return (
-							<div key={skill.id} className='relative'>
-								<div className='flex justify-between items-end mb-2'>
-									<span className='text-sm font-semibold text-foreground/80 flex items-center gap-2'>
-										<div className='w-1.5 h-1.5 rounded-full bg-primary shrink-0' />
+							<div key={skill.id} className='group/skill w-full'>
+								<div className='mb-2 flex justify-between items-end'>
+									<span className='text-sm font-medium text-foreground/80 group-hover/skill:text-primary transition-colors'>
 										{skill.name}
 									</span>
-									{level > 0 && (
-										<span className='text-xs font-mono text-muted-foreground'>
-											{level}%
-										</span>
-									)}
+									<span
+										className={cn(
+											"font-mono text-[10px] font-bold tabular-nums",
+											themeClasses.split(" ")[2],
+										)}>
+										{skill.level}%
+									</span>
 								</div>
 
-								<div className='h-2 w-full bg-muted/30 rounded-full overflow-hidden p-px border border-white/5'>
+								<div className='relative h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-800/50 overflow-hidden'>
 									<motion.div
 										initial={{ width: 0 }}
-										whileInView={{ width: `${level}%` }}
-										viewport={{ once: true }}
+										whileInView={{ width: `${skill.level}%` }}
 										transition={{
-											type: "spring",
-											bounce: 0,
 											duration: 1.5,
-											delay: 0.1 + sIdx * 0.05,
+											ease: [0.34, 1.56, 0.64, 1],
+											delay: 0.2 + sIdx * 0.1,
 										}}
+										viewport={{ once: true }}
 										className={cn(
-											"h-full rounded-full bg-linear-to-r shadow-sm",
-											getLevelGradient(level),
+											"h-full rounded-full bg-gradient-to-r",
+											themeClasses,
 										)}
 									/>
 								</div>
@@ -164,6 +175,6 @@ const SkillCategoryCard = ({
 					})}
 				</div>
 			</div>
-		</MotionSection>
+		</motion.div>
 	);
 };

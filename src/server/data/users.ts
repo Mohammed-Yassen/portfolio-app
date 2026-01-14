@@ -58,3 +58,25 @@ export async function getUserRole(id: string): Promise<string | null> {
 		return null;
 	}
 }
+export const getAdminSocialLinks = async () => {
+	try {
+		const socialLinks = await prisma.user.findUnique({
+			where: {
+				email: "al1111moliky@gmail.com",
+			},
+			select: {
+				profile: {
+					select: {
+						socials: true,
+					},
+				},
+			},
+		});
+		const { socials } = socialLinks?.profile || {};
+		console.log({ socials });
+		return socials;
+	} catch (error) {
+		console.error("[GET_ADMIN_SOCIAL_LINKS_ERROR]:", error);
+		return [];
+	}
+};

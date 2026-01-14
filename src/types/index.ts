@@ -11,6 +11,7 @@ export type HeroData = Omit<HeroSection, "updatedAt"> & {
 		description: string;
 		ctaText: string;
 		locale: Locale;
+		resumeUrl: string | null;
 	};
 };
 //

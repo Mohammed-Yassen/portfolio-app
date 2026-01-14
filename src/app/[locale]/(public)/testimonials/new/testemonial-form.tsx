@@ -104,7 +104,7 @@ export function TestimonialForm({
 				<FormFieldWrapper
 					control={form.control}
 					name='role'
-					label={t("role")}
+					label={t("title")}
 					locale={locale}>
 					{(field) => (
 						<Input

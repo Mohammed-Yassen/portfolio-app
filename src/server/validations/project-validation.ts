@@ -17,8 +17,8 @@ export const ProjectSchema = z
 		mainImage: z.string().url("Main image must be a valid URL"),
 		gallery: z.array(z.string().url()).default([]),
 		category: z.nativeEnum(ProjectCategory),
-		liveUrl: z.string().url().optional().or(z.literal("")),
-		repoUrl: z.string().url().optional().or(z.literal("")),
+		liveUrl: z.string().url().optional().or(z.literal("")).nullable(),
+		repoUrl: z.string().url().optional().or(z.literal("")).nullable(),
 		isFeatured: z.boolean().default(false),
 		isActive: z.boolean().default(true),
 
