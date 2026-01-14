@@ -73,7 +73,6 @@ export const getAdminSocialLinks = async () => {
 			},
 		});
 		const { socials } = socialLinks?.profile || {};
-		console.log({ socials });
 		return socials;
 	} catch (error) {
 		console.error("[GET_ADMIN_SOCIAL_LINKS_ERROR]:", error);
