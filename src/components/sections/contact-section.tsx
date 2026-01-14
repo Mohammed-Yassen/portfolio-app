@@ -65,7 +65,7 @@ export function ContactSectionForm() {
 			id='contact'
 			dir={isAr ? "rtl" : "ltr"} // Support Arabic RTL
 			className='py-24 bg-muted/20 dark:bg-transparent overflow-hidden'>
-			<div className='max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center'>
+			<div className='max-w-6xl mx-auto md:px-6 grid md:grid-cols-2 gap-12 items-center'>
 				{/* Left Side: Content */}
 				<motion.div
 					initial={{ opacity: 0, x: isAr ? 30 : -30 }} // Flip animation direction
