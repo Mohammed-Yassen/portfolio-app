@@ -14,35 +14,6 @@ import {
 
 /**
  * HERO SECTION
- */
-export const getHeroData = unstable_cache(
-	async (locale: Locale) => {
-		const hero = await prisma.heroSection.findFirst({
-			include: {
-				translations: { where: { locale } },
-			},
-			orderBy: { updatedAt: "desc" },
-		});
-
-		if (!hero) return null;
-		const trans = hero.translations[0];
-
-		return {
-			...hero,
-			resumeUrl: trans?.resumeUrl,
-			content: {
-				greeting: trans?.greeting ?? "",
-				name: trans?.name ?? "",
-				role: trans?.role ?? "",
-				description: trans?.description ?? "",
-				ctaText: trans?.ctaText ?? "",
-				locale: trans?.locale ?? locale,
-			},
-		};
-	},
-	["hero-data"], // Base key
-	{ revalidate: 3600, tags: ["hero"] },
-);
 
 /**
  * ABOUT SECTION
@@ -96,11 +67,45 @@ export const getAboutData = unstable_cache(
 	{ revalidate: 3600, tags: ["about"] },
 );
 
-/**
- * SKILLS SECTION (With proper Fallback)
- */
+/** @format */
+
+// Helper for consistent keys and tags
+const CACHE_TAGS = {
+	HERO: "hero",
+	ABOUT: "about",
+	SKILLS: "skills",
+	EXPERIENCE: "experience",
+} as const;
+
+export const getHeroData = unstable_cache(
+	async (locale: Locale) => {
+		const hero = await prisma.heroSection.findFirst({
+			include: { translations: { where: { locale } } },
+			orderBy: { updatedAt: "desc" },
+		});
+
+		if (!hero) return null;
+		const translation = hero.translations[0];
+
+		return {
+			...hero,
+			content: {
+				greeting: translation?.greeting ?? "",
+				name: translation?.name ?? "",
+				role: translation?.role ?? "",
+				description: translation?.description ?? "",
+				ctaText: translation?.ctaText ?? "",
+				resumeUrl: translation?.resumeUrl ?? "",
+				locale,
+			},
+		};
+	},
+	["hero-cache"], // Key
+	{ revalidate: 3600, tags: [CACHE_TAGS.HERO] }, // Tag
+);
+
 export const getSkills = unstable_cache(
-	async (locale: Locale): Promise<TransformedSkillCategory[]> => {
+	async (locale: Locale) => {
 		const categories = await prisma.skillCategory.findMany({
 			orderBy: { order: "asc" },
 			include: {
@@ -114,343 +119,100 @@ export const getSkills = unstable_cache(
 		});
 
 		return categories.map((cat) => {
-			const catTrans =
+			const trans =
 				cat.translations.find((t) => t.locale === locale) ||
 				cat.translations[0];
 			return {
-				id: cat.id,
-				icon: cat.icon,
-				order: cat.order,
-				isActive: cat.isActive,
-				title: catTrans?.title || "Untitled",
+				...cat,
+				title: trans?.title || "Untitled",
 				skills: cat.skills.map((s) => ({
-					id: s.id,
-					icon: s.icon,
-					level: s.level,
+					...s,
 					name:
 						s.translations.find((t) => t.locale === locale)?.name ||
 						s.translations[0]?.name ||
-						"Unknown",
+						"Skill",
 				})),
 			};
 		});
 	},
-	["skills-list"],
-	{ revalidate: 3600, tags: ["skills"] },
+	["skills-cache"],
+	{ revalidate: 3600, tags: [CACHE_TAGS.SKILLS] },
 );
 
 /**
- * EXPERIENCE SECTION
+ * EXPERIENCES
+ * Fetches professional history with locale fallback logic.
  */
 export const getExperiences = unstable_cache(
 	async (locale: Locale): Promise<TransformedExperience[]> => {
 		const data = await prisma.experience.findMany({
 			orderBy: { startDate: "desc" },
 			include: {
-				translations: { where: { locale } },
+				// Fetch both current locale and English as a fallback
+				translations: { where: { locale: { in: [locale, "en"] } } },
 				techniques: {
-					include: { translations: { where: { locale: "en" } } },
+					include: {
+						translations: { where: { locale: { in: [locale, "en"] } } },
+					},
 				},
 			},
 		});
 
-		return data.map((exp) => ({
-			...exp,
-			startDate: exp.startDate.toISOString(),
-			endDate: exp.endDate?.toISOString() || null,
-			updatedAt: exp.updatedAt.toISOString(),
-			role: exp.translations[0]?.role ?? "No Role",
-			employmentType: exp.translations[0]?.employmentType ?? "",
-			description: exp.translations[0]?.description ?? "",
-			techniques: exp.techniques.map((t) => ({
-				id: t.id,
-				icon: t.icon,
-				name: t.translations[0]?.name ?? "Unknown",
-			})),
-		}));
+		return data.map((exp) => {
+			// Priority: Requested Locale -> English -> First Available
+			const trans =
+				exp.translations.find((t) => t.locale === locale) ||
+				exp.translations[0];
+
+			return {
+				...exp,
+				startDate: exp.startDate.toISOString(),
+				endDate: exp.endDate?.toISOString() || null,
+				updatedAt: exp.updatedAt.toISOString(),
+				// Mapped Translation Fields
+				role: trans?.role || `Untitled Role`,
+				employmentType: trans?.employmentType || null,
+				description: trans?.description || null,
+				// Full translations kept for admin edit forms if needed
+				translations: exp.translations,
+				techniques: exp.techniques.map((tech) => ({
+					id: tech.id,
+					icon: tech.icon,
+					name:
+						tech.translations.find((t) => t.locale === locale)?.name ||
+						tech.translations[0]?.name ||
+						"Skill",
+				})),
+			};
+		});
 	},
-	["experience-list"],
+	["experience-list"], // Key is automatically scoped by arguments in newer Next versions,
 	{ revalidate: 3600, tags: ["experience"] },
 );
-// export const getHeroData = unstable_cache(
-// 	async (locale: Locale) => {
-// 		const hero = await prisma.heroSection.findFirst({
-// 			where: {
-// 				// isActive: true, // We only want the one set to live
-// 			},
-// 			include: {
-// 				translations: {
-// 					where: { locale }, // Filter at the PRISprisma level for performance
-// 				},
-// 			},
-// 			orderBy: {
-// 				updatedAt: "desc", // Fallback: get the most recently updated active one
-// 			},
-// 		});
 
-// 		if (!hero) return null;
-
-// 		// Since translations is an array (due to the 1-to-many relation),
-// 		// we take the first match for the current locale.
-// 		const translation = hero.translations[0];
-
-// 		return {
-// 			id: hero.id,
-// 			primaryImage: hero.primaryImage,
-// 			resumeUrl: hero.translations[0]?.resumeUrl,
-// 			availability: hero.availability,
-// 			updatedAt: hero.updatedAt,
-// 			isActive: hero.isActive,
-
-// 			// Merge translation fields into a content object
-// 			content: {
-// 				greeting: translation?.greeting ?? "",
-// 				name: translation?.name ?? "",
-// 				role: translation?.role ?? "",
-// 				description: translation?.description ?? "",
-// 				ctaText: translation?.ctaText ?? "",
-// 				locale: translation?.locale ?? locale,
-// 			},
-// 		};
-// 	},
-// 	["hero-data", locale], // <--- ADD LOCALE HERE
-// 	{ revalidate: 3600, tags: ["hero", `hero-${locale}`] },
-// );
-// //
-// import { AboutData, TransformedSkillCategory } from "@/types";
-
-// const ABOUT_ID = "about-static";
-
-// export const getAboutData = unstable_cache(
-// 	async (locale: Locale): Promise<AboutData | null> => {
-// 		const about = await prisma.aboutSection.findUnique({
-// 			where: { id: ABOUT_ID },
-// 			include: {
-// 				translations: {
-// 					where: { locale },
-// 				},
-// 				statuses: {
-// 					orderBy: { id: "asc" },
-// 					include: {
-// 						translations: {
-// 							where: { locale },
-// 						},
-// 					},
-// 				},
-// 				corePillars: {
-// 					orderBy: { id: "asc" },
-// 					include: {
-// 						translations: {
-// 							where: { locale },
-// 						},
-// 					},
-// 				},
-// 			},
-// 		});
-
-// 		if (!about) return null;
-
-// 		const main = about.translations[0];
-
-// 		return {
-// 			id: about.id,
-// 			updatedAt: about.updatedAt,
-// 			content: {
-// 				title: main?.title ?? "",
-// 				subtitle: main?.subtitle ?? "",
-// 				description: main?.description ?? "",
-// 				locale,
-// 			},
-// 			statuses: about.statuses.map((s) => ({
-// 				id: s.id,
-// 				icon: s.icon ?? "",
-// 				isActive: s.isActive,
-// 				label: s.translations[0]?.label ?? "",
-// 				value: s.translations[0]?.value ?? "",
-// 				locale,
-// 			})),
-// 			pillars: about.corePillars.map((p) => ({
-// 				id: p.id,
-// 				icon: p.icon,
-// 				title: p.translations[0]?.title ?? "",
-// 				description: p.translations[0]?.description ?? "",
-// 				locale,
-// 			})),
-// 		};
-// 	},
-// 	["about-data"],
-// 	{
-// 		revalidate: 3600,
-// 		tags: ["about"],
-// 	},
-// );
-
-// // export const getSkills = unstable_cache(
-// // 	async (locale: Locale): Promise<TransformedSkillCategory[]> => {
-// // 		try {
-// // 			const categories = await prisma.skillCategory.findMany({
-// // 				// We fetch everything (active and inactive) for a Dashboard Form
-// // 				orderBy: { order: "asc" },
-// // 				include: {
-// // 					translations: { where: { locale } },
-// // 					skills: {
-// // 						include: {
-// // 							translations: { where: { locale: "en" } },
-// // 						},
-// // 					},
-// // 				},
-// // 			});
-
-// // 			return categories.map((cat) => ({
-// // 				id: cat.id,
-// // 				icon: cat.icon,
-// // 				order: cat.order,
-// // 				isActive: cat.isActive,
-// // 				// Safely extract translation or provide a placeholder
-// // 				title: cat.translations[0]?.title || `No ${locale} title set`,
-// // 				skills: cat.skills.map((skill) => ({
-// // 					id: skill.id,
-// // 					name: skill.translations[0]?.name || "Unknown Skill",
-// // 					level: skill.level,
-// // 					icon: skill.icon,
-// // 				})),
-// // 			}));
-// // 		} catch (error) {
-// // 			console.error("Failed to fetch skills:", error);
-// // 			return []; // Return empty array to keep UI stable
-// // 		}
-// // 	},
-// // 	["skills-lists"], // Key
-// // 	{ revalidate: 10000, tags: ["skills"] }, // Cache configuration
-// // );
-// /** @format */
-// export const getSkills = unstable_cache(
-// 	async (locale: Locale): Promise<TransformedSkillCategory[]> => {
-// 		try {
-// 			const categories = await prisma.skillCategory.findMany({
-// 				orderBy: { order: "asc" },
-// 				include: {
-// 					translations: {
-// 						// Ensure we get at least one translation to prevent "Untitled"
-// 						where: { locale: { in: [locale, "en"] } },
-// 					},
-// 					skills: {
-// 						include: {
-// 							translations: {
-// 								where: { locale: { in: [locale, "en"] } },
-// 							},
-// 						},
-// 					},
-// 				},
-// 			});
-
-// 			return categories.map((cat) => {
-// 				// Priority fallback logic
-// 				const categoryTrans =
-// 					cat.translations.find((t) => t.locale === locale) ||
-// 					cat.translations.find((t) => t.locale === "en") ||
-// 					cat.translations[0];
-
-// 				return {
-// 					...cat,
-// 					title: categoryTrans?.title || "Untitled",
-// 					skills: cat.skills.map((skill) => ({
-// 						...skill,
-// 						name:
-// 							skill.translations.find((t) => t.locale === locale)?.name ||
-// 							skill.translations.find((t) => t.locale === "en")?.name ||
-// 							"Unknown Skill",
-// 					})),
-// 				};
-// 			});
-// 		} catch (error) {
-// 			return [];
-// 		}
-// 	},
-// 	["skills-lists", locale], // MUST include locale
-// 	{ revalidate: 3600, tags: ["skills"] },
-// );
-
-// import { TransformedExperience } from "@/types";
-
-// export const getExperiences = unstable_cache(
-// 	async (locale: Locale): Promise<TransformedExperience[]> => {
-// 		try {
-// 			const experiences = await prisma.experience.findMany({
-// 				// Order by most recent job first
-// 				orderBy: { startDate: "desc" },
-// 				include: {
-// 					translations: {
-// 						where: { locale },
-// 					},
-// 					techniques: {
-// 						include: {
-// 							translations: {
-// 								where: { locale: "en" },
-// 							},
-// 						},
-// 					},
-// 				},
-// 			});
-
-// 			return experiences.map((exp) => ({
-// 				id: exp.id,
-// 				companyName: exp.companyName,
-// 				companyLogo: exp.companyLogo,
-// 				companyWebsite: exp.companyWebsite,
-// 				location: exp.location,
-// 				startDate: exp.startDate.toISOString(),
-// 				endDate: exp.endDate?.toISOString() || null,
-// 				isCurrent: exp.isCurrent,
-// 				updatedAt: exp.updatedAt.toISOString(),
-
-// 				// Safely extract main translation fields
-// 				role: exp.translations[0]?.role || `No ${locale} role set`,
-// 				employmentType: exp.translations[0]?.employmentType || null,
-// 				description: exp.translations[0]?.description || null,
-
-// 				// Keep all translations available for the editing form state
-// 				translations: exp.translations,
-
-// 				// Map nested techniques and their localized names
-// 				techniques: exp.techniques.map((tech) => ({
-// 					id: tech.id,
-// 					icon: tech.icon,
-// 					name: tech.translations[0]?.name || "Unknown Tech",
-// 				})),
-// 			}));
-// 		} catch (error) {
-// 			console.error("Failed to fetch experiences:", error);
-// 			return [];
-// 		}
-// 	},
-// 	["experiences-lists"], // Cache Key
-// 	{
-// 		revalidate: 3600,
-// 		tags: ["experiences"], // Tag for manual revalidation in Server Actions
-// 	},
-// );
-
+/**
+ * EDUCATIONS
+ */
 export const getEducations = unstable_cache(
 	async (locale: Locale): Promise<TransformedEducation[]> => {
-		try {
-			const educations = await prisma.education.findMany({
-				orderBy: { startDate: "desc" },
-				include: {
-					translations: {
-						where: { locale },
-					},
-					techniques: {
-						include: {
-							translations: {
-								where: { locale: "en" }, // Base name for techniques
-							},
-						},
+		const data = await prisma.education.findMany({
+			orderBy: { startDate: "desc" },
+			include: {
+				translations: { where: { locale: { in: [locale, "en"] } } },
+				techniques: {
+					include: {
+						translations: { where: { locale: { in: [locale, "en"] } } },
 					},
 				},
-			});
+			},
+		});
 
-			return educations.map((edu) => ({
+		return data.map((edu) => {
+			const trans =
+				edu.translations.find((t) => t.locale === locale) ||
+				edu.translations[0];
+
+			return {
 				id: edu.id,
 				schoolName: edu.schoolName,
 				schoolLogo: edu.schoolLogo,
@@ -460,47 +222,44 @@ export const getEducations = unstable_cache(
 				endDate: edu.endDate?.toISOString() || null,
 				isCurrent: edu.isCurrent,
 				updatedAt: edu.updatedAt.toISOString(),
-
-				// Safe extraction for current locale
-				degree: edu.translations[0]?.degree || `No ${locale} degree set`,
-				fieldOfStudy: edu.translations[0]?.fieldOfStudy || null,
-				description: edu.translations[0]?.description || null,
-
-				// Full translations for the edit form state
+				// Mapped Translation Fields
+				degree: trans?.degree || "Degree",
+				fieldOfStudy: trans?.fieldOfStudy || null,
+				description: trans?.description || null,
 				translations: edu.translations,
-
-				// Map nested skills/techniques
 				techniques: edu.techniques.map((tech) => ({
 					id: tech.id,
 					icon: tech.icon,
-					name: tech.translations[0]?.name || "Unknown Skill",
+					name:
+						tech.translations.find((t) => t.locale === locale)?.name ||
+						tech.translations[0]?.name ||
+						"Skill",
 				})),
-			}));
-		} catch (error) {
-			console.error("Failed to fetch educations:", error);
-			return [];
-		}
+			};
+		});
 	},
-	["educations-lists"],
-	{
-		revalidate: 3600,
-		tags: ["educations"],
-	},
+	["education-list"],
+	{ revalidate: 3600, tags: ["education"] },
 );
 
+/**
+ * CERTIFICATIONS
+ */
 export const getCertifications = unstable_cache(
 	async (locale: Locale): Promise<TransformedCertification[]> => {
-		try {
-			const certifications = await prisma.certification.findMany({
-				orderBy: { issueDate: "desc" },
-				include: {
-					translations: {
-						where: { locale },
-					},
-				},
-			});
+		const data = await prisma.certification.findMany({
+			orderBy: { issueDate: "desc" },
+			include: {
+				translations: { where: { locale: { in: [locale, "en"] } } },
+			},
+		});
 
-			return certifications.map((cert) => ({
+		return data.map((cert) => {
+			const trans =
+				cert.translations.find((t) => t.locale === locale) ||
+				cert.translations[0];
+
+			return {
 				id: cert.id,
 				issuer: cert.issuer,
 				coverUrl: cert.coverUrl,
@@ -510,23 +269,14 @@ export const getCertifications = unstable_cache(
 				credentialUrl: cert.credentialUrl,
 				isActive: cert.isActive,
 				updatedAt: cert.updatedAt.toISOString(),
-
-				// Safe extraction for current locale
-				title: cert.translations[0]?.title || `No ${locale} title set`,
-				credentialId: cert.translations[0]?.credentialId || null,
-				description: cert.translations[0]?.description || null,
-
-				// Full translations for the edit form state
+				// Mapped Translation Fields
+				title: trans?.title || "Certificate",
+				credentialId: trans?.credentialId || null,
+				description: trans?.description || null,
 				translations: cert.translations,
-			}));
-		} catch (error) {
-			console.error("Failed to fetch certifications:", error);
-			return [];
-		}
+			};
+		});
 	},
-	["certifications-lists"],
-	{
-		revalidate: 3600,
-		tags: ["certifications"],
-	},
+	["certification-list"],
+	{ revalidate: 3600, tags: ["certification"] },
 );
