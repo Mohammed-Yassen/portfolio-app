@@ -38,10 +38,6 @@ export function IconPicker({
 	const filteredIconNames = useMemo(() => {
 		const allNames = Object.keys(AllIcons);
 
-		// Filter logic:
-		// 1. Must be a function (Component)
-		// 2. Must start with Uppercase (Standard for React Components)
-		// 3. Exclude internal library objects like "IconContext"
 		const validNames = allNames.filter((name) => {
 			const potentialIcon = AllIcons[name];
 			return (

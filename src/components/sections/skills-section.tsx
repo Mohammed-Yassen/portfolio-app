@@ -7,9 +7,9 @@ import { Locale } from "@prisma/client";
 import { TransformedSkillCategory } from "@/types";
 import { MotionSection } from "../shared/motion-viewport";
 import { cn } from "@/lib/utils";
-import { resolveIcon } from "@/lib/icon-utils";
+import * as Icons from "lucide-react";
 import { useTranslations } from "next-intl";
-
+import { DynamicIcon } from "@/lib/icon-utils";
 interface Props {
 	initialData: TransformedSkillCategory[];
 	locale: Locale;
@@ -95,13 +95,14 @@ const SkillCategoryCard = ({
 	const cardRef = useRef<HTMLDivElement>(null);
 	const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-	const IconComponent = resolveIcon(category.icon);
+	// const IconComponent = Icons.cat;
 
 	const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
 		if (!cardRef.current) return;
 		const rect = cardRef.current.getBoundingClientRect();
 		setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 	};
+	const Icon = Icons[category.icon as keyof typeof Icons] || Icons.HelpCircle;
 
 	return (
 		<motion.div
@@ -123,7 +124,12 @@ const SkillCategoryCard = ({
 			<div className='relative flex h-full flex-col rounded-[2.3rem] bg-white/80 dark:bg-zinc-950/60 p-8 backdrop-blur-xl'>
 				<div className='mb-6 flex items-center gap-4'>
 					<div className='flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-black/5 dark:border-white/10 text-primary shadow-sm group-hover:border-primary/40 transition-colors duration-500'>
-						{IconComponent && <IconComponent size={28} strokeWidth={1.5} />}
+						<DynamicIcon
+							name={category?.icon}
+							size={28}
+							strokeWidth={1.5}
+							className='transition-transform duration-300 group-hover:scale-110'
+						/>
 					</div>
 					<div className='min-w-0'>
 						<h3 className='truncate text-xl font-bold text-foreground group-hover:text-primary transition-colors'>
@@ -175,6 +181,7 @@ const SkillCategoryCard = ({
 					})}
 				</div>
 			</div>
+			{/*  */}
 		</motion.div>
 	);
 };

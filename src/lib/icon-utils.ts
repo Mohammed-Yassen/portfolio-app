@@ -1,37 +1,28 @@
 /** @format */
+import React from "react";
 import * as LucideIcons from "lucide-react";
-import * as SiIcons from "react-icons/si";
-import { LucideIcon, Layers } from "lucide-react";
-import { IconType } from "react-icons";
+import * as FaIcons from "react-icons/fa";
+import * as MdIcons from "react-icons/md";
+import { HelpCircle, LucideProps } from "lucide-react";
 
-/**
- * Senior Tip: We use 'any' as a fallback because icon libraries
- * have massive union types that can slow down TS performance
- * in large loops, but we keep the return type strict.
- */
-export type IconComponentType = LucideIcon | IconType;
+type IconComponentType = React.ComponentType<LucideProps>;
 
-export const resolveIcon = (
-	name: string | null | undefined,
-): IconComponentType => {
-	// Default fallback icon
-	if (!name) return Layers;
+export const AllIcons: Record<string, IconComponentType> = {
+	...(LucideIcons as unknown as Record<string, IconComponentType>),
+	...(FaIcons as unknown as Record<string, IconComponentType>),
+	...(MdIcons as unknown as Record<string, IconComponentType>),
+};
 
-	try {
-		// 1. Check Lucide Icons
-		// Use type assertion to access the object by string key
-		const LucideIcon = (LucideIcons as never)[name];
-		if (LucideIcon) return LucideIcon;
+interface DynamicIconProps extends LucideProps {
+	name: string;
+}
 
-		// 2. Check Simple Icons (react-icons/si)
-		const SiIcon = (SiIcons as Record<string, IconType>)[name];
-		if (SiIcon) return SiIcon;
-	} catch (error) {
-		console.warn(
-			`Icon "${name}" not found in libraries. Falling back to Layers.`,
-		);
-	}
+// In a .ts file, we use React.createElement instead of <Icon />
+export const DynamicIcon = ({
+	name,
+	...props
+}: DynamicIconProps): React.ReactElement => {
+	const IconComponent = AllIcons[name] || HelpCircle;
 
-	// Final fallback if no icon is found in either library
-	return Layers;
+	return React.createElement(IconComponent, props);
 };

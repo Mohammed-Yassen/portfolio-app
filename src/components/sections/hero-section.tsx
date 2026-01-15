@@ -265,91 +265,89 @@ export const HeroSection = ({
 /** @format */
 
 /** @format */
+/** @format */
 
 import { useTransform } from "framer-motion";
 import { BackgroundRippleEffect } from "../background-ripple-effect";
 
-const ROTATION_STIFFNESS = 150;
-const ROTATION_DAMPING = 20;
-
 const HeroImageHover = ({ src, alt }: { src: string; alt: string }) => {
-	const rotateX = useSpring(useMotionValue(0), {
-		stiffness: ROTATION_STIFFNESS,
-		damping: ROTATION_DAMPING,
-	});
-	const rotateY = useSpring(useMotionValue(0), {
-		stiffness: ROTATION_STIFFNESS,
-		damping: ROTATION_DAMPING,
-	});
+	// 1. Better Physics: Increased damping for a "smooth/heavy" feel
+	const springConfig = { stiffness: 100, damping: 30 };
+	const x = useMotionValue(0);
+	const y = useMotionValue(0);
 
-	// Parallax values based on rotation
-	const imageX = useTransform(rotateY, [-15, 15], [15, -15]);
-	const imageY = useTransform(rotateX, [-15, 15], [-15, 15]);
+	const rotateX = useSpring(
+		useTransform(y, [-0.5, 0.5], [8, -8]),
+		springConfig,
+	);
+	const rotateY = useSpring(
+		useTransform(x, [-0.5, 0.5], [-8, 8]),
+		springConfig,
+	);
+
+	// Subtle parallax for the image inside
+	const imageX = useTransform(x, [-0.5, 0.5], [10, -10]);
+	const imageY = useTransform(y, [-0.5, 0.5], [10, -10]);
 
 	function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
 		const rect = e.currentTarget.getBoundingClientRect();
-		const x = (e.clientX - rect.left) / rect.width - 0.5;
-		const y = (e.clientY - rect.top) / rect.height - 0.5;
-
-		rotateX.set(y * -20); // Sensitivity
-		rotateY.set(x * 20);
+		// Calculate relative mouse position (0 to 1)
+		x.set((e.clientX - rect.left) / rect.width - 0.5);
+		y.set((e.clientY - rect.top) / rect.height - 0.5);
 	}
 
 	const handleMouseLeave = () => {
-		rotateX.set(0);
-		rotateY.set(0);
+		x.set(0);
+		y.set(0);
 	};
 
 	return (
 		<motion.div
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleMouseLeave}
-			// 1. FLOATING ANIMATION (The "up and down" constant motion)
-			animate={{ y: [0, -12, 0] }}
+			// Gentle floating animation
+			animate={{ y: [0, -15, 0] }}
 			transition={{
-				duration: 5,
+				duration: 6,
 				repeat: Infinity,
 				ease: "easeInOut",
 			}}
 			style={{
 				rotateX,
 				rotateY,
+				perspective: "1000px",
 				transformStyle: "preserve-3d",
-				perspective: "1200px",
 			}}
-			whileHover={{ scale: 1.02 }}
-			className='group relative w-full h-full rounded-[2.5rem] lg:rounded-[4.5rem] overflow-hidden border border-white/10 shadow-2xl bg-zinc-900/50'>
-			{/* 2. PARALLAX IMAGE CONTAINER */}
+			className='group relative w-full h-full rounded-[2.5rem] lg:rounded-[4.5rem] overflow-hidden border border-white/10 shadow-2xl bg-zinc-900/50 cursor-pointer'>
+			{/* THE ZOOM EFFECT: We zoom the container slightly, but the image zooms more */}
 			<motion.div
-				className='relative w-full h-full scale-110'
+				className='relative w-full h-full'
+				transition={{ duration: 0.4, ease: "easeOut" }}
 				style={{
 					x: imageX,
 					y: imageY,
-					translateZ: "60px", // Increased depth perception
+					translateZ: "50px",
 				}}>
-				<Image
-					src={src}
-					alt={alt}
-					fill
-					priority
-					className='object-cover pointer-events-none'
-				/>
+				<motion.div
+					className='relative w-full h-full'
+					// THIS IS THE INNER ZOOM: Image gets bigger inside the frame on hover
+					whileHover={{ scale: 1.1 }}
+					transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}>
+					<Image
+						src={src}
+						alt={alt}
+						fill
+						priority
+						className='object-cover pointer-events-none'
+					/>
+				</motion.div>
 
-				{/* 3. SENIOR OVERLAY: Softens the image edges inside the container */}
-				<div className='absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent pointer-events-none' />
+				{/* Gradient Overlay for Depth */}
+				<div className='absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-60 pointer-events-none' />
 			</motion.div>
 
-			{/* 4. REFLECTION/GLARE EFFECT */}
-			<motion.div
-				className='absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700'
-				style={{
-					background:
-						"linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)",
-					backgroundSize: "200% 200%",
-				}}
-				animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
-				transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-			/>
+			{/* Reflection Glare (Subtle) */}
+			<div className='absolute inset-0 pointer-events-none bg-linear-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500' />
 		</motion.div>
 	);
 };

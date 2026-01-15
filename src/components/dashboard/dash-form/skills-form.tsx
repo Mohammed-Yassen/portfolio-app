@@ -57,6 +57,7 @@ import {
 	SkillCategoryFormValue,
 } from "@/server/validations";
 import { TransformedSkillCategory } from "@/types";
+import { DynamicIcon } from "@/lib/icon-utils";
 
 interface Props {
 	initialData: TransformedSkillCategory[];
@@ -291,7 +292,7 @@ export function SkillsForm({ initialData, locale }: Props) {
 											</Button>
 										</div>
 
-										<ScrollArea className='h-[300px] pr-4'>
+										<ScrollArea className='h-75 pr-4'>
 											<div className='space-y-3'>
 												{fields.map((field, index) => (
 													<div
@@ -384,14 +385,12 @@ export function SkillsForm({ initialData, locale }: Props) {
 				<div className='lg:col-span-7'>
 					<div className='space-y-3'>
 						{initialData.length === 0 && (
-							<div className='flex flex-col items-center justify-center p-20 border-2 border-dashed rounded-[2rem] text-muted-foreground bg-muted/10'>
+							<div className='flex flex-col items-center justify-center p-20 border-2 border-dashed rounded-4xl text-muted-foreground bg-muted/10'>
 								<AlertCircle className='w-10 h-10 mb-2 opacity-20' />
 								<p>No categories found for this locale.</p>
 							</div>
 						)}
 						{initialData.map((cat) => {
-							const Icon =
-								LucideIcons[cat.icon as keyof typeof LucideIcons] || Layers;
 							return (
 								<Card
 									key={cat.id}
@@ -409,6 +408,12 @@ export function SkillsForm({ initialData, locale }: Props) {
 														: "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
 												}`}>
 												{/* <Icon size={20} /> */}
+												<DynamicIcon
+													name={cat?.icon}
+													size={28}
+													strokeWidth={1.5}
+													className='transition-transform duration-300 group-hover:scale-110'
+												/>
 											</div>
 											<div>
 												<div className='flex items-center gap-2'>
