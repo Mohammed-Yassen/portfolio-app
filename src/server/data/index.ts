@@ -119,43 +119,102 @@ export const getAboutData = unstable_cache(
 	},
 );
 
+// export const getSkills = unstable_cache(
+// 	async (locale: Locale): Promise<TransformedSkillCategory[]> => {
+// 		try {
+// 			const categories = await prisma.skillCategory.findMany({
+// 				// We fetch everything (active and inactive) for a Dashboard Form
+// 				orderBy: { order: "asc" },
+// 				include: {
+// 					translations: { where: { locale } },
+// 					skills: {
+// 						include: {
+// 							translations: { where: { locale: "en" } },
+// 						},
+// 					},
+// 				},
+// 			});
+
+// 			return categories.map((cat) => ({
+// 				id: cat.id,
+// 				icon: cat.icon,
+// 				order: cat.order,
+// 				isActive: cat.isActive,
+// 				// Safely extract translation or provide a placeholder
+// 				title: cat.translations[0]?.title || `No ${locale} title set`,
+// 				skills: cat.skills.map((skill) => ({
+// 					id: skill.id,
+// 					name: skill.translations[0]?.name || "Unknown Skill",
+// 					level: skill.level,
+// 					icon: skill.icon,
+// 				})),
+// 			}));
+// 		} catch (error) {
+// 			console.error("Failed to fetch skills:", error);
+// 			return []; // Return empty array to keep UI stable
+// 		}
+// 	},
+// 	["skills-lists"], // Key
+// 	{ revalidate: 10000, tags: ["skills"] }, // Cache configuration
+// );
+/** @format */
 export const getSkills = unstable_cache(
 	async (locale: Locale): Promise<TransformedSkillCategory[]> => {
 		try {
 			const categories = await prisma.skillCategory.findMany({
-				// We fetch everything (active and inactive) for a Dashboard Form
 				orderBy: { order: "asc" },
 				include: {
-					translations: { where: { locale } },
+					// 1. Fetch both requested locale AND English for fallback
+					translations: {
+						where: { locale: { in: [locale, "en"] } },
+					},
 					skills: {
 						include: {
-							translations: { where: { locale: "en" } },
+							// 2. Fetch both for skills as well
+							translations: {
+								where: { locale: { in: [locale, "en"] } },
+							},
 						},
 					},
 				},
 			});
 
-			return categories.map((cat) => ({
-				id: cat.id,
-				icon: cat.icon,
-				order: cat.order,
-				isActive: cat.isActive,
-				// Safely extract translation or provide a placeholder
-				title: cat.translations[0]?.title || `No ${locale} title set`,
-				skills: cat.skills.map((skill) => ({
-					id: skill.id,
-					name: skill.translations[0]?.name || "Unknown Skill",
-					level: skill.level,
-					icon: skill.icon,
-				})),
-			}));
+			return categories.map((cat) => {
+				// Find translation: priority to current locale, then English, then first available
+				const categoryTrans =
+					cat.translations.find((t) => t.locale === locale) ||
+					cat.translations.find((t) => t.locale === "en") ||
+					cat.translations[0];
+
+				return {
+					id: cat.id,
+					icon: cat.icon,
+					order: cat.order,
+					isActive: cat.isActive,
+					title: categoryTrans?.title || `Untitled Category`,
+					skills: cat.skills.map((skill) => {
+						// Priority: Arabic (or locale) -> English -> First available
+						const skillTrans =
+							skill.translations.find((t) => t.locale === locale) ||
+							skill.translations.find((t) => t.locale === "en") ||
+							skill.translations[0];
+
+						return {
+							id: skill.id,
+							name: skillTrans?.name || "Unknown Skill",
+							level: skill.level,
+							icon: skill.icon,
+						};
+					}),
+				};
+			});
 		} catch (error) {
 			console.error("Failed to fetch skills:", error);
-			return []; // Return empty array to keep UI stable
+			return [];
 		}
 	},
-	["skills-lists"], // Key
-	{ revalidate: 10000, tags: ["skills"] }, // Cache configuration
+	["skills-lists"],
+	{ revalidate: 10000, tags: ["skills"] },
 );
 
 import { TransformedExperience } from "@/types";

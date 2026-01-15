@@ -57,7 +57,7 @@ export async function updateTestimonialStatus(input: unknown) {
 				isActive: z.boolean().optional(),
 				isFeatured: z.boolean().optional(),
 			}),
-			accessLevel: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+			accessLevel: [UserRole.OWNER, UserRole.SUPER_ADMIN],
 		},
 		async (data) => {
 			const updated = await prisma.testimonial.update({
@@ -91,7 +91,7 @@ export async function deleteTestimonial(input: unknown) {
 		input,
 		{
 			schema: z.object({ id: z.string().min(1) }),
-			accessLevel: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+			accessLevel: [UserRole.OWNER, UserRole.SUPER_ADMIN],
 		},
 		async (data) => {
 			await prisma.testimonial.delete({ where: { id: data.id } });
@@ -111,7 +111,7 @@ export async function bulkDeleteAction(input: unknown) {
 		input,
 		{
 			schema: z.object({ ids: z.array(z.string()) }),
-			accessLevel: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+			accessLevel: [UserRole.OWNER, UserRole.SUPER_ADMIN],
 		},
 		async (data) => {
 			await prisma.testimonial.deleteMany({

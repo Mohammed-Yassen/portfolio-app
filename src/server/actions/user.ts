@@ -18,7 +18,7 @@ export async function updateProfile(values: ProfileFormValues) {
 		values,
 		{
 			schema: ProfileSchema,
-			accessLevel: [UserRole.SUPER_ADMIN],
+			accessLevel: [UserRole.SUPER_ADMIN, UserRole.OWNER],
 		},
 		async (data, ctx) => {
 			const userId = ctx.user?.id;
@@ -101,7 +101,7 @@ export async function updateRole(rawInput: unknown) {
 				targetUserId: z.string().min(1),
 				role: z.nativeEnum(UserRole),
 			}),
-			accessLevel: [UserRole.ADMIN],
+			accessLevel: [UserRole.SUPER_ADMIN, UserRole.OWNER],
 		},
 		async (data, ctx) => {
 			// Security check:ctx.user comes from your session wrapper
@@ -129,7 +129,7 @@ export async function deleteUser(input: unknown) {
 		input,
 		{
 			schema: z.object({ targetUserId: z.string().min(1) }),
-			accessLevel: [UserRole.ADMIN],
+			accessLevel: [UserRole.SUPER_ADMIN, UserRole.OWNER],
 		},
 		async (data, ctx) => {
 			if (data.targetUserId === ctx.user?.id) {
