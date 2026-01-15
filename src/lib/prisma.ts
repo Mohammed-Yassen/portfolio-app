@@ -4,13 +4,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const prismaClientSingleton = () => {
-	// Use the Pooled URL (6543)
-	const connectionString = process.env.DATABASE_URL;
-	const pool = new Pool({ connectionString });
+	// Use Pooled URL for the app runtime
+	const pool = new Pool({
+		connectionString: process.env.DATABASE_URL,
+		max: 1,
+	});
 	const adapter = new PrismaPg(pool);
-
-	// In modern Prisma, the adapter is passed here.
-	// We do NOT pass datasourceUrl when using an adapter.
 	return new PrismaClient({ adapter });
 };
 
