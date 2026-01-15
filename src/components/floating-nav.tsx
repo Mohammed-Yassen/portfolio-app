@@ -1,7 +1,7 @@
 /** @format */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -28,7 +28,6 @@ import {
 import { useIsMounted } from "@/app/hooks/is-mounted";
 import { Locale } from "@prisma/client";
 
-// قاموس الترجمة للقوائم
 const navTranslations = {
 	en: {
 		home: "Home",
@@ -57,43 +56,104 @@ const navTranslations = {
 };
 
 interface FloatingDockProps {
-	locale: Locale; // استلام القيمة مباشرة كـ Enum
+	locale: Locale;
+	config?: {
+		navActive: boolean;
+		heroActive: boolean;
+		aboutActive: boolean;
+		skillActive: boolean;
+		experienceActive: boolean;
+		projectActive: boolean;
+		blogActive: boolean;
+		contactActive: boolean;
+		testimonialActive: boolean;
+		footerActive: boolean;
+		serviceActive: boolean;
+		certificationActive: boolean;
+		resumeActive: boolean;
+	};
 }
 
-export const FloatingDock = ({ locale }: FloatingDockProps) => {
+export const FloatingDock = ({ locale, config }: FloatingDockProps) => {
 	const mounted = useIsMounted();
 	const [showMore, setShowMore] = useState(false);
 	const { theme, setTheme } = useTheme();
+
 	const t =
 		navTranslations[locale as keyof typeof navTranslations] ||
 		navTranslations.en;
 
-	const primaryItems = [
-		{ name: t.home, href: "#hero", icon: <Home className='w-5 h-5' /> },
-		{ name: t.about, href: "#about", icon: <User className='w-5 h-5' /> },
-		{ name: t.skills, href: "#skills", icon: <Terminal className='w-5 h-5' /> },
-		{ name: t.projects, href: "#projects", icon: <Code className='w-5 h-5' /> },
-		{ name: t.contact, href: "#contact", icon: <Mail className='w-5 h-5' /> },
-	];
+	// Filter Primary Items based on config visibility
+	const primaryItems = useMemo(() => {
+		const items = [
+			{
+				key: "heroActive",
+				name: t.home,
+				href: "#hero",
+				icon: <Home className='w-5 h-5' />,
+			},
+			{
+				key: "aboutActive",
+				name: t.about,
+				href: "#about",
+				icon: <User className='w-5 h-5' />,
+			},
+			{
+				key: "skillActive",
+				name: t.skills,
+				href: "#skills",
+				icon: <Terminal className='w-5 h-5' />,
+			},
+			{
+				key: "projectActive",
+				name: t.projects,
+				href: "#projects",
+				icon: <Code className='w-5 h-5' />,
+			},
+			{
+				key: "contactActive",
+				name: t.contact,
+				href: "#contact",
+				icon: <Mail className='w-5 h-5' />,
+			},
+		];
+		return items.filter(
+			(item) => config?.[item.key as keyof typeof config] !== false,
+		);
+	}, [t, config]);
 
-	const secondaryItems = [
-		{
-			name: t.services,
-			href: "#services",
-			icon: <Settings className='w-4 h-4' />,
-		},
-		{
-			name: t.testimonials,
-			href: "#testimonials",
-			icon: <MessageSquare className='w-4 h-4' />,
-		},
-		{
-			name: t.certifications,
-			href: "#certifications",
-			icon: <Award className='w-4 h-4' />,
-		},
-		{ name: t.blog, href: "#blog", icon: <BookOpen className='w-4 h-4' /> },
-	];
+	// Filter Secondary Items based on config visibility
+	const secondaryItems = useMemo(() => {
+		const items = [
+			{
+				key: "serviceActive",
+				name: t.services,
+				href: "#services",
+				icon: <Settings className='w-4 h-4' />,
+			},
+			{
+				key: "testimonialActive",
+				name: t.testimonials,
+				href: "#testimonials",
+				icon: <MessageSquare className='w-4 h-4' />,
+			},
+			{
+				key: "certificationActive",
+				name: t.certifications,
+				href: "#certifications",
+				icon: <Award className='w-4 h-4' />,
+			},
+			{
+				key: "blogActive",
+				name: t.blog,
+				href: "#blog",
+				icon: <BookOpen className='w-4 h-4' />,
+			},
+		];
+		return items.filter(
+			(item) => config?.[item.key as keyof typeof config] !== false,
+		);
+	}, [t, config]);
 
 	const handleScroll = (
 		e: React.MouseEvent<HTMLAnchorElement>,
@@ -111,9 +171,9 @@ export const FloatingDock = ({ locale }: FloatingDockProps) => {
 	return (
 		<div className='fixed bottom-8 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none'>
 			<div className='relative flex flex-col items-center'>
-				{/* القائمة الفرعية العمودية */}
+				{/* Vertical Sub-menu (AnimatePresence) */}
 				<AnimatePresence>
-					{showMore && (
+					{showMore && secondaryItems.length > 0 && (
 						<motion.div
 							initial={{ opacity: 0, y: 10, scale: 0.95 }}
 							animate={{ opacity: 1, y: -10, scale: 1 }}
@@ -133,7 +193,7 @@ export const FloatingDock = ({ locale }: FloatingDockProps) => {
 					)}
 				</AnimatePresence>
 
-				{/* القائمة الرئيسية الأفقية */}
+				{/* Horizontal Main Dock */}
 				<nav className='flex items-center gap-1 p-2 rounded-2xl bg-background/60 backdrop-blur-xl border border-border shadow-2xl pointer-events-auto'>
 					<TooltipProvider delayDuration={0}>
 						{primaryItems.map((item) => (
@@ -154,31 +214,34 @@ export const FloatingDock = ({ locale }: FloatingDockProps) => {
 							</Tooltip>
 						))}
 
+						{/* More Button: Only show if secondary items exist */}
+						{secondaryItems.length > 0 && (
+							<>
+								<div className='w-px h-6 bg-border mx-1' />
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<button
+											onClick={() => setShowMore(!showMore)}
+											className={`p-3 rounded-xl transition-all duration-300 ${
+												showMore
+													? "bg-primary text-primary-foreground rotate-90"
+													: "text-muted-foreground hover:bg-primary/10"
+											}`}>
+											<MoreHorizontal className='w-5 h-5' />
+										</button>
+									</TooltipTrigger>
+									<TooltipContent
+										side='top'
+										className='bg-primary text-primary-foreground font-bold mb-2'>
+										{t.more}
+									</TooltipContent>
+								</Tooltip>
+							</>
+						)}
+
 						<div className='w-px h-6 bg-border mx-1' />
 
-						{/* زر المزيد */}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									onClick={() => setShowMore(!showMore)}
-									className={`p-3 rounded-xl transition-all duration-300 ${
-										showMore
-											? "bg-primary text-primary-foreground rotate-90"
-											: "text-muted-foreground hover:bg-primary/10"
-									}`}>
-									<MoreHorizontal className='w-5 h-5' />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent
-								side='top'
-								className='bg-primary text-primary-foreground font-bold mb-2'>
-								{t.more}
-							</TooltipContent>
-						</Tooltip>
-
-						<div className='w-px h-6 bg-border mx-1' />
-
-						{/* زر تبديل الثيم */}
+						{/* Theme Toggle */}
 						<Button
 							variant='ghost'
 							size='icon'

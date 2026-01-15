@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import {
 	LayoutDashboard,
 	User,
@@ -38,7 +38,7 @@ import prisma from "@/lib/prisma";
 import { SectionActivationClient } from "@/components/dashboard/dash-form/sections-activation";
 import { CertificationForm } from "@/components/dashboard/dash-form/certification-form";
 import { CertificationsSkeleton } from "@/components/sections/sections-skeleton";
-import { FaCertificate } from "react-icons/fa";
+
 import { HeroData } from "@/types";
 
 interface Props {

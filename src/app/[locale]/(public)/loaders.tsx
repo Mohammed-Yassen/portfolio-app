@@ -95,7 +95,7 @@ export async function TestimonialsLoader({ locale }: { locale: Locale }) {
 }
 export async function FooterLoader({ locale }: { locale: Locale }) {
 	const socialLinks = await getAdminSocialLinks();
-	if (!socialLinks) return null;
+	// if (!socialLinks) return null;
 	return <Footer socialLinks={null} locale={locale} />;
 }
 export async function CertificationLoader({ locale }: { locale: Locale }) {

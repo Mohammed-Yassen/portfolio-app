@@ -45,6 +45,9 @@ const DEFAULT_UI_CONFIG = {
 	contactActive: true,
 	testimonialActive: true,
 	footerActive: true,
+	serviceActive: true,
+	certificationActive: true,
+	resumeActive: true,
 };
 
 interface HomeProps {
@@ -74,7 +77,7 @@ export default async function Home({ params }: HomeProps) {
 			<div
 				dir={isRtl ? "rtl" : "ltr"}
 				className={isRtl ? "font-arabic" : "font-sans"}>
-				{ui.navActive && <FloatingDock locale={locale} />}
+				{ui.navActive && <FloatingDock locale={locale} config={ui} />}
 
 				<HomeHeader user={session?.user} />
 
@@ -124,7 +127,7 @@ export default async function Home({ params }: HomeProps) {
 						<ContactSectionForm />
 					</Suspense>
 				)}
-				{ui.contactActive && (
+				{ui.serviceActive && (
 					<Suspense fallback={<BlogSkeleton />}>
 						<ServicesSection />
 					</Suspense>
